@@ -24,7 +24,7 @@ RESPONSE_KEY = "index"
 #Leave blank to Binding to all interfaces, Otherwise Enter C2 Servers IP Address
 BIND_ADDR = ""
 
-#Command to input timeout settings in seconds; 225 is right for Azure; set to None if not needed
+#Command to input timeout settings in seconds; 225 is right for Azure; set to None if unnecessary
 #INPUT_TIMEOUT = 225
 INPUT_TIMEOUT = None
 
