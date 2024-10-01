@@ -160,6 +160,7 @@ class C2Handler(BaseHTTPRequestHandler):
                 with open(f"{filepath}", "rb") as fileHandle:
                     self.http_response(200)
                     self.wfile.write(cipher.encrypt(fileHandle.read()))
+                print(f"{filepath} has been Downloaded from C2 Server")
 
             except (FileNotFoundError, OSError):
                 print(f"{filepath} was not found on C2 Server.")
@@ -215,6 +216,8 @@ class C2Handler(BaseHTTPRequestHandler):
             with open(incomingFile, 'wb') as fileHandle:
                 uploadData = cipher.decrypt(self.rfile.read(fileLength))
                 fileHandle.write(uploadData)
+
+            print(f"{incomingFile} has been Written on C2 Server")
 
         # Nobody should ever get here using an HTTP Put method
         else:
