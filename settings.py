@@ -37,7 +37,10 @@ BIND_ADDR = ""
 INPUT_TIMEOUT = None
 
 # Directory to hold uploaded client files, initialize automatically in server side
-STORAGE = "incoming"
+INCOMING = "incoming"
+
+# Directory to Stage files for possible download to the client
+OUTGOING = "outgoing"
 
 """Detect OS to Run below commands automatically to prevent against Azure, and other hosting environment 
 from killing our Active Session,

