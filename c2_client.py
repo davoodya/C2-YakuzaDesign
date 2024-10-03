@@ -39,7 +39,7 @@ else:
 encryptedClient = cipher.encrypt(client.encode()).decode()
 
 # Print C2 Client Side Message for avoid complexing in test operation
-print(Fore.LIGHTMAGENTA_EX + "[+]-------------C2 Client Side-------------[+]" + Fore.RESET)
+print(Fore.LIGHTMAGENTA_EX + "\n[+]-------------C2 Client Side-------------[+]" + Fore.RESET)
 
 
 def post_to_server(message: str, response_path=RESPONSE):

