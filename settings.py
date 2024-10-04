@@ -28,6 +28,17 @@ RESPONSE_KEY = "index"
 # Password use for Encrypting & Decrypting zip files; must be byte's data type
 ZIP_PASSWORD = b"*--->Red_Team_Winning<---*"
 
+"""Shell Commands"""
+#Shell for linux
+SHELL = "/bin/bash"
+
+#Shell for Windows
+#SHELL = "cmd.exe"
+
+#SHELL Commands based on OS
+SHELL_LINUX = "/bin/bash"
+SHELL_WINDOWS = "cmd.exe"
+
 """----------Variables used in C2 server Only----------"""
 # Leave blank to Binding to all interfaces, Otherwise Enter C2 Servers IP Address
 BIND_ADDR = ""
@@ -47,6 +58,12 @@ from killing our Active Session,
 [*] change KEEP_ALIVE_CMD value to command you want run to keep active session"""
 KEEP_ALIVE_CMD = "whoami"
 
+# We should change User-Agent to avoid being blocked, But other keys is Optional
+HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                         "Chrome/129.0.0.0 Safari/537.36"}
+# Log a file to recording Compromised clients
+LOG = "pwned.log"
+
 # KEEP_ALIVE_CMD based on OS
 #
 # from platform import system
@@ -63,10 +80,6 @@ KEEP_ALIVE_CMD = "whoami"
 # # set KEEP_ALIVE_CMD's value on 'cd' for other Builds to prevent against timeout
 # else:
 #     KEEP_ALIVE_CMD = "cd"
-
-# We should change User-Agent to avoid being blocked, But other keys is Optional
-HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                         "Chrome/129.0.0.0 Safari/537.36"}
 
 
 

