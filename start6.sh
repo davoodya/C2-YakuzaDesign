@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # List of users
-users=("davoodya" "hossein" "korosh" "daria" "aria")
+users=("davoodya" "korosh" "daria" "aria")
 
 # Run the Python script for each user
 for user in "${users[@]}"
