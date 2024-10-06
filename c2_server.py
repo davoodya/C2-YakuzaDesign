@@ -266,7 +266,7 @@ class C2Handler(BaseHTTPRequestHandler):
                               "client keylog off - turn off the keylogger on the client and write the results to disk",
                               "client type TEXT - Type the text you choice on a client's keyboard",
                               "client screenshot - grab a copy of the client's screens",
-                              "client display FILENAME - display an image on the client's screen",
+                              "client display IMAGE - display an image on the client's screen",
                               "client flip screen - client flip - flip a client's screen upside down",
                               "client roll screen - client roll - flip a client's screen upside down",
                               "client max sound - client max - turn a client's volume all the way up",

