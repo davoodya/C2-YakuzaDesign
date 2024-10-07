@@ -43,7 +43,7 @@ This tool is written and intended **only for educational purposes** or for use i
     ```
 2. Deploy the C2 client on the target machine:
     ```bash
-    python c2_client.py
+    python win_client.py
     ```
 3. Use the command interface to control the target:
     ```bash

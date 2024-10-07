@@ -36,7 +36,7 @@ def main():
     #src_dir = input("Enter the source directory path: ")
     #dst_dir = input("Enter the destination directory path: ")
 
-    src_dir = "H:\Repo\C2_py"
+    src_dir = "/"
     dst_dir = "H:\Repo\C2_py\outcoming"
 
     start_time = time.time()

