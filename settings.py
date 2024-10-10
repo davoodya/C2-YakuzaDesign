@@ -41,8 +41,8 @@ SHELL_WINDOWS = "cmd.exe"
 
 """----------Variables used in C2 server Only----------"""
 # Leave blank to Binding to all interfaces, Otherwise Enter C2 Servers IP Address
+#BIND_ADDR = "192.168.180.1"
 BIND_ADDR = ""
-#BIND_ADDR = "192.168.10.100"
 
 # Command to input timeout settings in seconds; 225 is right for Azure; set to None if unnecessary
 # INPUT_TIMEOUT = 225
@@ -72,7 +72,7 @@ PROXY = None
 
 # C2 Server IP Address C2_SERVER = "127.0.0.1"
 C2_SERVER = "localhost"
-#C2_SERVER = "192.168.10.100"
+#C2_SERVER = "192.168.10.75"
 
 # Define sleep delay time in seconds for a reconnection attempt
 DELAY = 3
