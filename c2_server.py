@@ -9,13 +9,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from os import path, mkdir, listdir, system
 from platform import system as platform_system
 from urllib.parse import unquote_plus
-
 # Custom Features Import
 from datetime import datetime
 from colorama import Fore
 from inputimeout import inputimeout, TimeoutOccurred
 from pyzipper import AESZipFile, ZIP_LZMA, WZ_AES
-
+from sys import exit
 from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, FILE_REQUEST, RESPONSE, RESPONSE_KEY, INPUT_TIMEOUT, KEEP_ALIVE_CMD,
