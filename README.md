@@ -917,7 +917,7 @@ See [LICENSE](LICENSE) for full details.
 
 ### ⭐ Star this repository if you find it useful!
 
-**Made with ❤️ by Davood Yahay Professionals**
+**Made with 🧠️ by Davood Yahay Professionals**
 
 *For security research and authorized testing only*
 
