@@ -71,8 +71,8 @@ LOG = "pwned.log"
 PROXY = None
 
 # C2 Server IP Address C2_SERVER = "127.0.0.1"
-# C2_SERVER = "localhost"
-C2_SERVER = "192.168.10.100"
+C2_SERVER = "localhost"
+#C2_SERVER = "192.168.10.100"
 #C2_SERVER = "172.29.132.195"
 
 # Define sleep delay time in seconds for a reconnection attempt
